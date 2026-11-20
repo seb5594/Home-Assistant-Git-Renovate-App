@@ -79,6 +79,12 @@ test('GitHub: repositories are collected across pages', async () => {
   assert.deepEqual(all.map((item) => [item.fullName, item.canPush, item.isArchived]), [['a/one', true, false], ['a/two', false, false], ['a/three', true, true]]);
 });
 
+test('Gitea: an account without full name or email is flagged', async () => {
+  const profile = (body) => gitea.whoami({ endpoint: 'http://g/api/v1/', token: 't', fetch: fakeFetch({ 'GET /user': { body } }) });
+  assert.deepEqual((await profile({ id: 1, login: 'a' })).warnings, [{ code: 'missing_profile' }]);
+  assert.deepEqual((await profile({ id: 1, login: 'a', full_name: 'A B', email: 'a@example.com' })).warnings, []);
+});
+
 test('GitLab: pagination follows x-next-page and forks are flagged', async () => {
   const fetcher = fakeFetch({
     'GET /projects': (url) => (url.includes('page=2')
@@ -91,6 +97,17 @@ test('GitLab: pagination follows x-next-page and forks are flagged', async () =>
   assert.equal(fetcher.calls[0].headers['PRIVATE-TOKEN'], 't');
 });
 
+test('Gitea: mirrors and repositories without pull requests are not offered', async () => {
+  const fetcher = fakeFetch({ 'GET /user/repos': { body: [
+    { full_name: 'a/ok', permissions: { push: true } },
+    { full_name: 'a/mirror', permissions: { push: true }, mirror: true },
+    { full_name: 'a/no-prs', permissions: { push: true }, has_pull_requests: false },
+  ] } });
+  const all = [];
+  for await (const item of gitea.listRepositories({ endpoint: 'http://g/api/v1/', token: 't', fetch: fetcher })) all.push([item.fullName, item.canPush]);
+  assert.deepEqual(all, [['a/ok', true], ['a/mirror', false], ['a/no-prs', false]]);
+});
+
 test('Gitea: a token is created from the password, with the scopes Renovate needs', async () => {
   const fetcher = fakeFetch({ 'POST /users/sven/tokens': { status: 201, body: { id: 3, sha1: 'secret-token' } } });
   const { token, tokenName } = await gitea.credentialLogin.createToken({ endpoint: 'http://g:3000/api/v1/', fetch: fetcher }, { username: 'sven', password: 'pw', otp: '123456' });
@@ -99,7 +116,7 @@ test('Gitea: a token is created from the password, with the scopes Renovate need
   const [call] = fetcher.calls;
   assert.equal(call.headers.Authorization, `Basic ${Buffer.from('sven:pw').toString('base64')}`);
   assert.equal(call.headers['X-GITEA-OTP'], '123456');
-  assert.deepEqual(JSON.parse(call.body).scopes, ['write:repository', 'write:issue', 'read:user', 'read:organization']);
+  assert.deepEqual(JSON.parse(call.body).scopes, ['write:repository', 'write:issue', 'read:user', 'read:organization', 'read:misc']);
 });
 
 test('Gitea: wrong passwords and missing one-time codes are told apart', async () => {

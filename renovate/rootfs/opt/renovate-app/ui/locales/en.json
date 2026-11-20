@@ -133,7 +133,7 @@
   "repositories.archived": "Archived",
   "repositories.fork": "Fork",
   "repositories.private": "Private",
-  "repositories.read_only": "No push access",
+  "repositories.read_only": "Cannot be updated",
   "wizard.title": "Connect a git server",
   "wizard.subtitle": "Four short steps. You can change everything later.",
   "wizard.steps": "Steps",
@@ -483,5 +483,6 @@
   "error.run_finished": "This run has already finished.",
   "error.forbidden_source": "This interface is only reachable through Home Assistant.",
   "error.not_found": "Not found.",
-  "error.internal_error": "Something went wrong. See the app log for details."
+  "error.internal_error": "Something went wrong. See the app log for details.",
+  "wizard.warning.missing_profile": "The account has no full name or email address in its profile. Renovate uses them for its commits, so add them in your server's account settings."
 }

@@ -27,7 +27,7 @@ export function fakeFetch(routes) {
 
 export const giteaRoutes = (names = ['sven/one', 'sven/two', 'sven/three']) => ({
   'GET /user/repos': { body: names.map((full_name) => ({ full_name, html_url: `http://g/${full_name}`, default_branch: 'main', private: true, fork: false, archived: false, permissions: { push: true } })) },
-  'GET /user': { body: { id: 1, login: 'sven', full_name: 'Sven', avatar_url: 'http://g/a.png' } },
+  'GET /user': { body: { id: 1, login: 'sven', full_name: 'Sven', email: 'sven@example.com', avatar_url: 'http://g/a.png' } },
 });
 
 export async function createEnvironment(t, { options = {}, routes = giteaRoutes(), resources = {} } = {}) {

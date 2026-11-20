@@ -40,7 +40,9 @@ For GitHub and GitLab the assistant opens the token page with the name and permi
 | --- | --- |
 | GitHub | `repo` and `workflow` (classic), or contents, pull requests, issues and workflows with write access (fine-grained) |
 | GitLab | `api` and `write_repository` |
-| Gitea, Forgejo | `write:repository`, `write:issue`, `read:user`, `read:organization` |
+| Gitea, Forgejo | `write:repository`, `write:issue`, `read:user`, `read:organization`, `read:misc` (`read:misc` is only needed by Gitea 1.20.0 and 1.20.1). Add `read:packages` if you use Gitea packages. |
+
+On Gitea and Forgejo the account should have its **full name and email address** set; Renovate uses them for its commits, and the assistant warns when they are missing. Renovate skips mirrors and repositories with pull requests switched off. Choose the server type *Forgejo* for Forgejo and Codeberg: Renovate is removing Forgejo support from its Gitea platform.
 
 The pull requests are opened by the account the token belongs to. Create a separate account such as `renovate` for a clean history.
 

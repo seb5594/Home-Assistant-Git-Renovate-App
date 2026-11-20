@@ -27,7 +27,7 @@ http.createServer((req, res) => {
   };
   const { pathname } = new URL(req.url, 'http://x');
   if (pathname === '/api/v1/version') return json({ version: '1.22.0' });
-  if (pathname === '/api/v1/user') return json({ id: 1, login: 'sven', full_name: 'Sven Example', avatar_url: 'http://127.0.0.1:3999/avatar.png' });
+  if (pathname === '/api/v1/user') return json({ id: 1, login: 'sven', full_name: 'Sven Example', email: 'sven@example.com', avatar_url: 'http://127.0.0.1:3999/avatar.png' });
   if (pathname === '/api/v1/user/repos') return json(REPOSITORIES);
   if (pathname.endsWith('/tokens')) return json({ id: 1, sha1: 'dev-token' }, 201);
   if (pathname.endsWith('/hooks')) return json(req.method === 'POST' ? {} : [], req.method === 'POST' ? 201 : 200);

@@ -40,7 +40,9 @@ Für GitHub und GitLab öffnet der Assistent die Token-Seite mit bereits ausgef�
 | --- | --- |
 | GitHub | `repo` und `workflow` (klassisch) oder Contents, Pull requests, Issues und Workflows mit Schreibzugriff (feingranular) |
 | GitLab | `api` und `write_repository` |
-| Gitea, Forgejo | `write:repository`, `write:issue`, `read:user`, `read:organization` |
+| Gitea, Forgejo | `write:repository`, `write:issue`, `read:user`, `read:organization`, `read:misc` (`read:misc` brauchen nur Gitea 1.20.0 und 1.20.1). Ergänze `read:packages`, wenn du Gitea-Pakete nutzt. |
+
+Bei Gitea und Forgejo sollte das Konto **Vollname und E-Mail-Adresse** eingetragen haben; Renovate nutzt sie für seine Commits, und der Assistent warnt, wenn sie fehlen. Renovate überspringt Spiegel-Repositories und Repositories mit abgeschalteten Pull Requests. Wähle für Forgejo und Codeberg den Servertyp *Forgejo*: Renovate entfernt die Forgejo-Unterstützung aus seiner Gitea-Plattform.
 
 Die Pull Requests öffnet das Konto, zu dem das Token gehört. Lege für einen sauberen Verlauf ein eigenes Konto wie `renovate` an.
 

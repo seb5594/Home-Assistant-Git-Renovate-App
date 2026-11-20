@@ -2,7 +2,9 @@
 import { paginate, parseBaseUrl, requestJson, ProviderError } from './http.mjs';
 import { hmacSha256Hex, randomId, safeEqual } from '../security/crypto.mjs';
 
-const SCOPES = ['write:repository', 'write:issue', 'read:user', 'read:organization'];
+// From the Renovate documentation: repository and issue write, user and organization read (Gitea 1.20 and newer),
+// and misc read, which only Gitea 1.20.0 and 1.20.1 need. Older versions ignore scopes they do not know.
+const SCOPES = ['write:repository', 'write:issue', 'read:user', 'read:organization', 'read:misc'];
 const TOKEN_PREFIX = 'renovate-home-assistant';
 
 const apiToWeb = (endpoint) => endpoint.replace(/\/api\/v1\/?$/, '').replace(/\/$/, '');
@@ -35,7 +37,9 @@ function createProvider(id, label) {
 
     async whoami(ctx) {
       const { data } = await requestJson(`${ctx.endpoint}user`, { headers: tokenHeaders(ctx), fetch: ctx.fetch });
-      return { id: String(data.id), login: data.login, name: data.full_name || data.login, avatarUrl: data.avatar_url ?? null, warnings: [] };
+      // Renovate's documentation asks for a full name and an email address on the account: its commits use them.
+      const warnings = data.full_name && data.email ? [] : [{ code: 'missing_profile' }];
+      return { id: String(data.id), login: data.login, name: data.full_name || data.login, avatarUrl: data.avatar_url ?? null, warnings };
     },
 
     async *listRepositories(ctx) {
@@ -48,7 +52,8 @@ function createProvider(id, label) {
           isPrivate: Boolean(repo.private),
           isFork: Boolean(repo.fork),
           isArchived: Boolean(repo.archived),
-          canPush: repo.permissions?.push ?? true,
+          // Renovate skips mirrors and repositories with pull requests switched off, so they are not offered either.
+          canPush: (repo.permissions?.push ?? true) && !repo.mirror && repo.has_pull_requests !== false,
         };
       }
     },

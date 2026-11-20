@@ -175,7 +175,7 @@ export async function wizard(container, { boot, navigate }) {
     const name = h('input', { type: 'text', value: `${providerName(state.provider)} ${account.login}`, maxlength: '60' });
     return h('div', { class: 'stack' },
       notice('ok', h('div', {}, h('strong', {}, t('wizard.verified', { login: account.login })), h('div', {}, t('wizard.verified_counts', { total: repositoryCount, pushable: pushableCount })))),
-      warnings.map((warning) => notice('warn', t('wizard.warning.missing_scope', { scope: warning.scope }))),
+      warnings.map((warning) => notice('warn', t(`wizard.warning.${warning.code}`, { scope: warning.scope }))),
       pushableCount === 0 ? notice('warn', t('wizard.no_pushable')) : null,
       h('label', { class: 'field' }, t('wizard.name'), name, h('span', { class: 'hint' }, t('wizard.name_hint'))),
       h('div', { class: 'row' },

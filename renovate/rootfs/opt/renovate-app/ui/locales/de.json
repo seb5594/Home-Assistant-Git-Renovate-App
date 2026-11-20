@@ -133,7 +133,7 @@
   "repositories.archived": "Archiviert",
   "repositories.fork": "Fork",
   "repositories.private": "Privat",
-  "repositories.read_only": "Kein Push-Zugriff",
+  "repositories.read_only": "Nicht nutzbar",
   "wizard.title": "Git-Server verbinden",
   "wizard.subtitle": "Vier kurze Schritte. Du kannst später alles ändern.",
   "wizard.steps": "Schritte",
@@ -483,5 +483,6 @@
   "error.run_finished": "Dieser Lauf ist bereits beendet.",
   "error.forbidden_source": "Diese Oberfläche ist nur über Home Assistant erreichbar.",
   "error.not_found": "Nicht gefunden.",
-  "error.internal_error": "Etwas ist schiefgelaufen. Details stehen im Protokoll der App."
+  "error.internal_error": "Etwas ist schiefgelaufen. Details stehen im Protokoll der App.",
+  "wizard.warning.missing_profile": "Im Profil des Kontos fehlen Vollname oder E-Mail-Adresse. Renovate nutzt sie für seine Commits, trage sie deshalb in den Kontoeinstellungen deines Servers ein."
 }
