@@ -484,5 +484,15 @@
   "error.forbidden_source": "Diese Oberfläche ist nur über Home Assistant erreichbar.",
   "error.not_found": "Nicht gefunden.",
   "error.internal_error": "Etwas ist schiefgelaufen. Details stehen im Protokoll der App.",
-  "wizard.warning.missing_profile": "Im Profil des Kontos fehlen Vollname oder E-Mail-Adresse. Renovate nutzt sie für seine Commits, trage sie deshalb in den Kontoeinstellungen deines Servers ein."
+  "wizard.warning.missing_profile": "Im Profil des Kontos fehlen Vollname oder E-Mail-Adresse. Renovate nutzt sie für seine Commits, trage sie deshalb in den Kontoeinstellungen deines Servers ein.",
+  "config.problems_title": "Die App-Konfiguration hat Probleme",
+  "config.problems_text": "Diese Einträge konnten nicht übernommen werden. Korrigiere sie in der App-Konfiguration; sie wird innerhalb von Sekunden übernommen.",
+  "chip.restart": "Neustart nötig",
+  "chip.restart_hint": "In der App-Konfiguration wurden zusätzliche Pakete oder Zertifikate geändert. Sie werden erst beim Start der App übernommen.",
+  "settings.config.title": "App-Konfiguration",
+  "settings.config.text": "Änderungen in der App-Konfiguration werden innerhalb von Sekunden übernommen, ohne Neustart. Nur zusätzliche Systempakete und Zertifikate brauchen einen Neustart der App.",
+  "settings.config.synced": "Zuletzt abgeglichen {when}",
+  "settings.config.reload": "Jetzt abgleichen",
+  "settings.config.reloaded": "Die App-Konfiguration wurde übernommen",
+  "settings.config.unchanged": "Die App-Konfiguration ist bereits aktuell"
 }

@@ -46,6 +46,7 @@ export function registerApi(router, app) {
       resources: app.getResources(),
       machine: app.machine,
       webhooks: app.webhookServer.status(),
+      configuration: app.configuration,
     };
   });
 
@@ -251,6 +252,8 @@ export function registerApi(router, app) {
     settings.update(body.changes ?? {});
     return { settings: settings.describe(), resources: app.getResources() };
   });
+
+  post('/api/configuration/reload', async () => ({ ...(await app.reloadConfiguration()), configuration: app.configuration }));
 
   post('/api/maintenance/clear-cache', () => {
     // The folder is fixed by the app, never taken from the request.

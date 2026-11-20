@@ -115,6 +115,7 @@ export function createSettings({ db, vault, options = {} }) {
           patternHint: definition.patternHint,
           scope: definition.scope,
           advanced: Boolean(definition.advanced),
+          restart: Boolean(definition.restart),
           default: definition.type === 'secret' ? null : (definition.default ?? null),
           value: publicValue(definition, entry.value),
           configured: definition.type === 'secret' ? Boolean(entry.value) : undefined,
@@ -159,7 +160,7 @@ export function createSettings({ db, vault, options = {} }) {
       if (writes.length) refresh(writes.map((write) => write.key));
     },
 
-    /** Applies a new options.json (after the app configuration was saved and the app restarted). */
+    /** Applies a new options.json, as soon as Home Assistant has saved the app configuration. */
     reloadOptions(next) {
       optionValues = next;
       refresh(DEFINITIONS.map((definition) => definition.key));

@@ -1,9 +1,10 @@
 // The settings page is generated from the definitions the server sends (server/settings/registry.mjs), so a new
 // setting needs no interface code, only its texts in the locale files.
 import { api } from '../api.mjs';
-import { badge, busy, confirmDialog, notice, reportError, skeleton, switchControl, toast } from '../components.mjs';
+import { badge, busy, configurationNotice, confirmDialog, notice, reportError, skeleton, switchControl, toast } from '../components.mjs';
 import { h, mount } from '../dom.mjs';
-import { iconLock, iconPlus, iconTrash } from '../icons.mjs';
+import { iconLock, iconPlus, iconRefresh, iconTrash } from '../icons.mjs';
+import { dateTime } from '../format.mjs';
 import { hasText, t } from '../i18n.mjs';
 
 const GROUPS = ['general', 'schedule', 'resources', 'history', 'renovate', 'webhooks', 'home_assistant', 'advanced'];
@@ -15,12 +16,21 @@ const optionLabel = (key, value) => (hasText(`settings.${key}.${value}`) ? t(`se
 export async function settingsView(container, context) {
   mount(container, skeleton(3));
   let data = await api.get('settings');
+  let configuration = (await api.get('status')).configuration;
   const timers = new Map();
+  // The box that shows which resource profile is in effect. It is replaced after every change, because a
+  // changed profile or limit changes what the box says, while the form itself must not be redrawn under the cursor.
+  let resourcesBox = null;
 
   async function save(key, value, { reload = false } = {}) {
     try {
       data = { ...data, ...(await api.put('settings', { changes: { [key]: value } })) };
       toast(t('common.saved'));
+      if (resourcesBox) {
+        const next = resourcesInfo();
+        resourcesBox.replaceWith(next);
+        resourcesBox = next;
+      }
       if (key.startsWith('general.')) await context.reloadBoot();
       else if (reload) paint();
     } catch (error) {
@@ -110,10 +120,28 @@ export async function settingsView(container, context) {
     return h('section', { class: 'card' },
       h('div', { class: 'card-head' }, h('h2', {}, t(`settings.group.${name}`))),
       h('p', { class: 'muted' }, t(`settings.group.${name}.help`)),
-      name === 'resources' ? resourcesInfo() : null,
+      name === 'resources' ? (resourcesBox = resourcesInfo()) : null,
       basic.map(item),
       advanced.length ? h('details', { class: 'advanced' }, h('summary', {}, t('settings.advanced')), advanced.map(item)) : null);
   }
+
+  const configurationCard = () => h('section', { class: 'card stack' },
+    h('h2', {}, t('settings.config.title')),
+    h('p', { class: 'muted' }, t('settings.config.text')),
+    configurationNotice(configuration),
+    h('div', { class: 'row' },
+      h('button', { class: 'btn', type: 'button', onclick: async (event) => busy(event.currentTarget, async () => {
+        try {
+          const result = await api.post('configuration/reload');
+          configuration = result.configuration;
+          data = await api.get('settings');
+          toast(t(result.changed ? 'settings.config.reloaded' : 'settings.config.unchanged'));
+          paint();
+        } catch (error) {
+          reportError(error);
+        }
+      }) }, iconRefresh(), t('settings.config.reload')),
+      configuration.syncedAt ? h('span', { class: 'muted small' }, t('settings.config.synced', { when: dateTime(configuration.syncedAt) })) : null));
 
   const maintenance = () => h('section', { class: 'card stack' }, h('h2', {}, t('settings.maintenance.title')), h('p', { class: 'muted' }, t('settings.maintenance.text')),
     h('div', { class: 'row' },
@@ -139,6 +167,7 @@ export async function settingsView(container, context) {
     mount(container,
       h('div', { class: 'page-head' }, h('div', {}, h('h1', {}, t('settings.title')), h('p', {}, t('settings.subtitle')))),
       notice('info', t('settings.how_it_works')),
+      configurationCard(),
       GROUPS.map(group), maintenance());
   }
 
