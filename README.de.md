@@ -81,7 +81,7 @@ Was CE zum „Server“ macht (Zeitplan, Warteschlange, Webhooks, Status), ergä
 ## Ehrliche Grenzen
 
 - **Experimentell.** Siehe Hinweis ganz oben.
-- **Nur amd64 und aarch64.** Renovate braucht Node.js 24, das ältere Alpine-Versionen für 32-Bit-Systeme nicht bieten. Home Assistant hat 32-Bit-Systeme ohnehin eingestellt.
+- **Architekturen:** Die App wird wie das Basis-Image für amd64, aarch64, armv7, armhf und i386 gebaut. Der Autor nutzt nur amd64 und aarch64; die 32-Bit-Builds sind ungetestet, und Renovate braucht viel Arbeitsspeicher, auf kleinen Boards ist es also langsam.
 - **Pull Requests kommen von dem Konto, das du verbindest.** Nutze für einen sauberen Verlauf ein eigenes „renovate“-Konto. Das Token einer GitHub App oder eines GitLab-Bots lässt sich ebenfalls als Token einfügen.
 - **Tokens der Browser-Anmeldung laufen ab**, bei Gitea nach einer Stunde, bei GitLab nach zwei. Die App erneuert sie vor jedem Lauf; widerruft ein Server die Anmeldung, muss die Verbindung neu hinzugefügt werden.
 - **Lock-Dateien von Nicht-JavaScript-Projekten** brauchen ihre Werkzeuge. Das Image enthält Node.js, npm und Git; ergänze `python3`, `py3-pip`, `go` und weitere unter *Zusätzliche Systempakete*, wenn deine Repositories sie brauchen. Docker-in-Docker (`binarySource: docker`) steht nicht zur Verfügung.
