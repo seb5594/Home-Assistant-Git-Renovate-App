@@ -1,13 +1,16 @@
 // Connections to git servers and the repositories they expose.
 import { nowIso, parseJson, transaction } from '../db/database.mjs';
 import { getProvider } from '../providers/index.mjs';
+import { refreshAccessToken } from '../providers/oauth.mjs';
 import { randomId, randomSecret } from '../security/crypto.mjs';
-import { badRequest, conflict, notFound } from '../util/errors.mjs';
+import { AppError, badRequest, conflict, notFound } from '../util/errors.mjs';
 import { log } from '../util/log.mjs';
 import { isRepositoryEnabled } from './patterns.mjs';
 
 const NAME = /^[\p{L}\p{N} ._()-]{1,60}$/u;
 const MAX_PATTERNS = 50;
+// An access token that expires within this time is renewed before it is used.
+const REFRESH_MARGIN_MS = 10 * 60_000;
 
 function toConnection(row) {
   return {
@@ -15,6 +18,8 @@ function toConnection(row) {
     name: row.name,
     provider: row.provider,
     endpoint: row.endpoint,
+    username: row.username,
+    authMethod: row.refresh_enc ? 'browser' : 'token',
     accountLogin: row.account_login,
     accountName: row.account_name,
     hasAvatar: Boolean(row.avatar_url),
@@ -72,7 +77,7 @@ function checkPatterns(label, value) {
 
 function checkExtraConfig(value) {
   if (!value || typeof value !== 'object' || Array.isArray(value)) throw badRequest('invalid_extra_config', 'Extra Renovate options must be a JSON object');
-  const forbidden = ['token', 'platform', 'endpoint', 'repositories', 'autodiscover', 'hostRules', 'baseDir', 'cacheDir'].filter((key) => key in value);
+  const forbidden = ['token', 'username', 'password', 'platform', 'endpoint', 'repositories', 'autodiscover', 'hostRules', 'baseDir', 'cacheDir'].filter((key) => key in value);
   if (forbidden.length) throw badRequest('invalid_extra_config', `These options are managed by the app: ${forbidden.join(', ')}`);
   if (JSON.stringify(value).length > 20_000) throw badRequest('invalid_extra_config', 'Extra Renovate options are too large');
   return value;
@@ -95,7 +100,9 @@ export function createConnections({ db, vault, fetch: fetcher = fetch }) {
     return found;
   };
 
-  const contextOf = (found) => ({ endpoint: found.endpoint, token: vault.decrypt(found.token_enc), fetch: fetcher });
+  const contextOf = (found) => ({ endpoint: found.endpoint, token: vault.decrypt(found.token_enc), username: found.username, fetch: fetcher });
+  /** One renewal at a time per connection: servers that rotate refresh tokens refuse the second use of one. */
+  const renewals = new Map();
 
   const api = {
     list() {
@@ -117,6 +124,32 @@ export function createConnections({ db, vault, fetch: fetcher = fetch }) {
       return { ...toConnection(found), token: vault.decrypt(found.token_enc), webhookSecret: found.webhook_secret, rule: asRuleInput(found) };
     },
 
+    /**
+     * Connections signed in through the browser have an access token that expires. This renews it when it is about
+     * to, so a run never starts with a token that dies halfway.
+     */
+    async ensureFreshToken(id) {
+      const found = row(id);
+      if (!found.refresh_enc) return;
+      const expires = found.token_expires_at ? Date.parse(found.token_expires_at) : 0;
+      if (expires - Date.now() > REFRESH_MARGIN_MS) return;
+      if (!renewals.has(id)) {
+        const job = (async () => {
+          try {
+            const fresh = await refreshAccessToken(getProvider(found.provider), { endpoint: found.endpoint, fetch: fetcher }, { clientId: found.oauth_client_id, refreshToken: vault.decrypt(found.refresh_enc) });
+            db.prepare('UPDATE connections SET token_enc = ?, refresh_enc = ?, token_expires_at = ?, updated_at = ? WHERE id = ?')
+              .run(vault.encrypt(fresh.accessToken), vault.encrypt(fresh.refreshToken), fresh.expiresAt, nowIso(), id);
+          } catch (error) {
+            throw new AppError(401, 'oauth_expired', `The sign-in through the browser can no longer be renewed (${error.message}). Sign in again.`);
+          } finally {
+            renewals.delete(id);
+          }
+        })();
+        renewals.set(id, job);
+      }
+      await renewals.get(id);
+    },
+
     getWebhookSecret(id) {
       return row(id).webhook_secret;
     },
@@ -129,25 +162,29 @@ export function createConnections({ db, vault, fetch: fetcher = fetch }) {
      * Checks a token against the server and describes the account. Used by the setup wizard before anything is stored.
      * @returns {Promise<{provider:string, endpoint:string, account:object}>}
      */
-    async verify({ provider: providerId, endpoint, token }) {
+    async verify({ provider: providerId, endpoint, token, username }) {
       const provider = getProvider(providerId);
       const normalized = provider.normalizeEndpoint(endpoint);
       if (!token || typeof token !== 'string') throw badRequest('token_required', 'A token is required');
-      const account = await provider.whoami({ endpoint: normalized, token: token.trim(), fetch: fetcher });
-      return { provider: providerId, endpoint: normalized, account };
+      const user = typeof username === 'string' ? username.trim() : '';
+      if (provider.usernameRequired && !user) throw badRequest('username_required', 'The user name is required');
+      const account = await provider.whoami({ endpoint: normalized, token: token.trim(), username: user || null, fetch: fetcher });
+      return { provider: providerId, endpoint: normalized, username: user || null, account };
     },
 
-    async create({ name, provider: providerId, endpoint, token, tokenName = null, mode = 'selected', managed = false }) {
+    async create({ name, provider: providerId, endpoint, token, username = null, oauth = null, tokenName = null, mode = 'selected', managed = false }) {
       if (!NAME.test(name ?? '')) throw badRequest('invalid_name', 'The name may contain letters, digits, spaces and . _ ( ) -');
       if (byName.get(name)) throw conflict('name_taken', `A connection named "${name}" already exists`);
       if (!['all', 'selected'].includes(mode)) throw badRequest('invalid_mode', 'The mode must be "all" or "selected"');
-      const checked = await api.verify({ provider: providerId, endpoint, token });
+      const checked = await api.verify({ provider: providerId, endpoint, token, username });
       const id = randomId(5);
       const now = nowIso();
       db.prepare(`INSERT INTO connections
-        (id, name, provider, endpoint, token_enc, token_ref, account_login, account_name, avatar_url, mode, webhook_secret, managed, created_at, updated_at)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`).run(
-        id, name, providerId, checked.endpoint, vault.encrypt(token.trim()), tokenName,
+        (id, name, provider, endpoint, username, token_enc, token_ref, oauth_client_id, refresh_enc, token_expires_at,
+         account_login, account_name, avatar_url, mode, webhook_secret, managed, created_at, updated_at)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`).run(
+        id, name, providerId, checked.endpoint, checked.username, vault.encrypt(token.trim()), tokenName,
+        oauth?.clientId ?? null, oauth?.refreshToken ? vault.encrypt(oauth.refreshToken) : null, oauth?.expiresAt ?? null,
         checked.account.login, checked.account.name, checked.account.avatarUrl, mode, randomSecret(), managed ? 1 : 0, now, now,
       );
       await api.syncRepositories(id).catch((error) => log.warn(`First repository sync of "${name}" failed`, error));
@@ -190,11 +227,11 @@ export function createConnections({ db, vault, fetch: fetcher = fetch }) {
     async replaceToken(id, token) {
       const found = row(id);
       if (found.managed) throw conflict('connection_managed', 'This connection is defined in the app configuration');
-      const checked = await api.verify({ provider: found.provider, endpoint: found.endpoint, token });
+      const checked = await api.verify({ provider: found.provider, endpoint: found.endpoint, token, username: found.username });
       if (checked.account.login !== found.account_login) {
         throw conflict('account_mismatch', `The token belongs to ${checked.account.login}, but this connection uses ${found.account_login}`);
       }
-      db.prepare('UPDATE connections SET token_enc = ?, token_ref = NULL, updated_at = ? WHERE id = ?').run(vault.encrypt(token.trim()), nowIso(), id);
+      db.prepare('UPDATE connections SET token_enc = ?, token_ref = NULL, oauth_client_id = NULL, refresh_enc = NULL, token_expires_at = NULL, updated_at = ? WHERE id = ?').run(vault.encrypt(token.trim()), nowIso(), id);
       return { connection: api.get(id), warnings: checked.account.warnings };
     },
 
@@ -206,6 +243,7 @@ export function createConnections({ db, vault, fetch: fetcher = fetch }) {
 
     /** Reads the repository list from the git server and updates the local copy. */
     async syncRepositories(id) {
+      await api.ensureFreshToken(id);
       const found = row(id);
       const provider = getProvider(found.provider);
       const seen = [];
@@ -273,6 +311,8 @@ export function createConnections({ db, vault, fetch: fetcher = fetch }) {
     async registerWebhooks(id, { url, repositories }) {
       const found = row(id);
       const provider = getProvider(found.provider);
+      if (!provider.webhooks) throw conflict('webhooks_unsupported', `${provider.label} connections cannot set up webhooks`);
+      await api.ensureFreshToken(id);
       const context = contextOf(found);
       const names = repositories ?? api.enabledRepositoryNames(id);
       const outcome = { created: 0, updated: 0, failed: [] };

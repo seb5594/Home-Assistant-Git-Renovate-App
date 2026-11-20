@@ -30,14 +30,14 @@ export async function reconcileManagedConnections({ db, vault, connections, spec
       if (existing) {
         const sameToken = vault.decrypt(existing.token_enc) === spec.token;
         const endpoint = getProvider(spec.provider).normalizeEndpoint(spec.url);
-        if (!sameToken || existing.provider !== spec.provider || existing.endpoint !== endpoint) {
+        if (!sameToken || existing.provider !== spec.provider || existing.endpoint !== endpoint || (existing.username ?? '') !== spec.username) {
           // The account is verified again with the new details before they replace the old ones.
-          const checked = await connections.verify({ provider: spec.provider, endpoint: spec.url, token: spec.token });
-          db.prepare('UPDATE connections SET provider = ?, endpoint = ?, token_enc = ?, account_login = ?, account_name = ?, avatar_url = ?, updated_at = ? WHERE id = ?')
-            .run(spec.provider, checked.endpoint, vault.encrypt(spec.token), checked.account.login, checked.account.name, checked.account.avatarUrl, nowIso(), id);
+          const checked = await connections.verify({ provider: spec.provider, endpoint: spec.url, token: spec.token, username: spec.username });
+          db.prepare('UPDATE connections SET provider = ?, endpoint = ?, username = ?, token_enc = ?, account_login = ?, account_name = ?, avatar_url = ?, updated_at = ? WHERE id = ?')
+            .run(spec.provider, checked.endpoint, checked.username, vault.encrypt(spec.token), checked.account.login, checked.account.name, checked.account.avatarUrl, nowIso(), id);
         }
       } else {
-        ({ connection: { id } } = await connections.create({ name: spec.name, provider: spec.provider, endpoint: spec.url, token: spec.token, managed: true }));
+        ({ connection: { id } } = await connections.create({ name: spec.name, provider: spec.provider, endpoint: spec.url, token: spec.token, username: spec.username, managed: true }));
       }
 
       const explicit = spec.repositories.length > 0;
@@ -76,6 +76,7 @@ export function specsFromOptions(options) {
       name: String(entry.name),
       provider: entry.provider,
       url: entry.url ?? '',
+      username: String(entry.username ?? '').trim(),
       token: String(entry.token),
       repositories: toList(entry.repositories),
       include: toList(entry.include),

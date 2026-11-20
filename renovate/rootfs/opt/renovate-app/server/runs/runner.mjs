@@ -2,7 +2,7 @@
 // log, collects the report and cleans up. Everything the process needs comes from the arguments, so tests can
 // substitute a small script for Renovate.
 import { spawn } from 'node:child_process';
-import { chmodSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { chmodSync, chownSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import readline from 'node:readline';
@@ -53,14 +53,19 @@ function readUserConfig(file) {
  */
 export function createRunner({ settings, connections, logStore, getResources, paths, processEnv = process.env, spawnProcess = spawn, renovateVersion = () => 'unknown' }) {
   /** @returns {Promise<{status:string, exitCode:number|null, error:string|null, summary:object|null, perRepository:Map<string, object>}>} */
+  /** Gives a file or folder to the user Renovate runs as; a no-op when the server does not run as root. */
+  const handOver = (target) => {
+    if (paths.runAs) chownSync(target, paths.runAs.uid, paths.runAs.gid);
+  };
+
   async function execute(run, { signal }) {
     const writer = logStore.open(run.id);
     const note = (level, message) => writer.write({ t: Date.now(), l: level, m: message });
     const values = settings.values();
     const resources = getResources();
-    const connection = connections.getForRun(run.connectionId);
-    const provider = getProvider(connection.provider);
-    const renovate = provider.renovateConnection(connection);
+    const initial = connections.getForRun(run.connectionId);
+    const provider = getProvider(initial.provider);
+    const renovate = provider.renovateConnection(initial);
     const directories = runDirectories({ work: paths.work, cache: paths.cache, runId: run.id });
     const perRepository = new Map();
     const collectedEntries = [];
@@ -76,13 +81,14 @@ export function createRunner({ settings, connections, logStore, getResources, pa
         return { status: 'succeeded', exitCode: 0, error: 'no_repositories', summary: { totals: totals(perRepository), repositories: {} }, perRepository };
       }
 
-      mkdirSync(directories.baseDir, { recursive: true, mode: 0o700 });
-      mkdirSync(directories.home, { recursive: true, mode: 0o700 });
-      mkdirSync(directories.cacheDir, { recursive: true, mode: 0o700 });
+      for (const folder of [directories.root, directories.baseDir, directories.home, directories.cacheDir]) {
+        mkdirSync(folder, { recursive: true, mode: 0o700 });
+        handOver(folder);
+      }
       const userConfig = values['renovate.config_file'] ? readUserConfig(path.join(paths.userConfig, values['renovate.config_file'])) : {};
 
       const batches = chunk(repositories, resources.batchSize);
-      note('info', `Renovate ${renovateVersion()} starts for ${repositories.length} ${repositories.length === 1 ? 'repository' : 'repositories'} of "${connection.name}" `
+      note('info', `Renovate ${renovateVersion()} starts for ${repositories.length} ${repositories.length === 1 ? 'repository' : 'repositories'} of "${initial.name}" `
         + `(${resources.profile} profile, ${resources.memoryLimitMb} MB, ${batches.length} ${batches.length === 1 ? 'batch' : 'batches'}${run.dryRun ? `, preview: ${run.dryRun}` : ''}).`);
 
       const deadline = Date.now() + resources.timeoutMs;
@@ -92,9 +98,13 @@ export function createRunner({ settings, connections, logStore, getResources, pa
           break;
         }
         if (batches.length > 1) note('info', `Batch ${index + 1} of ${batches.length}: ${batch.length} repositories.`);
+        // Tokens of connections signed in through the browser expire; renew before every batch, not only at the start.
+        await connections.ensureFreshToken(run.connectionId);
+        const connection = connections.getForRun(run.connectionId);
         const config = buildRenovateConfig({ connection, renovate, repositories: batch, settings: values, directories, userConfig, dryRun: run.dryRun });
         writeFileSync(directories.configFile, JSON.stringify(config), { mode: 0o600 });
         chmodSync(directories.configFile, 0o600);
+        handOver(directories.configFile);
         rmSync(directories.reportPath, { force: true });
         const env = buildRenovateEnv({ processEnv, connection, renovate, settings: values, resources, files: { configFile: directories.configFile, home: directories.home } });
 
@@ -113,7 +123,8 @@ export function createRunner({ settings, connections, logStore, getResources, pa
       }
     } catch (error) {
       note('error', error.message);
-      return { status: 'failed', exitCode: null, error: error.message, summary: null, perRepository };
+      // Errors with a code (an expired sign-in) are explained by the interface; the others show their message.
+      return { status: 'failed', exitCode: null, error: error.code ?? error.message, summary: null, perRepository };
     } finally {
       rmSync(directories.root, { recursive: true, force: true });
       writer.close();
@@ -130,7 +141,7 @@ export function createRunner({ settings, connections, logStore, getResources, pa
   function runBatch({ env, cwd, resources, deadline, signal, writer, collectedEntries }) {
     return new Promise((resolve) => {
       const outcome = { exitCode: null, signal: null, timedOut: false, cancelled: false };
-      const child = spawnProcess(process.execPath, [paths.renovateBin], { cwd, env, detached: true, stdio: ['ignore', 'pipe', 'pipe'] });
+      const child = spawnProcess(process.execPath, [paths.renovateBin], { cwd, env, detached: true, stdio: ['ignore', 'pipe', 'pipe'], ...(paths.runAs ?? {}) });
       child.on('error', (error) => {
         writer.write({ t: Date.now(), l: 'error', m: `Renovate could not be started: ${error.message}` });
         outcome.exitCode = 127;

@@ -23,7 +23,8 @@ const CONNECTIONS = {
     name: 'Connections', description: 'Git server accounts defined here instead of in the web interface. They are read-only there. Useful to set the app up from configuration alone.',
     fields: {
       name: ['Name', 'Name of the connection.'],
-      provider: ['Server type', 'github, gitlab, gitea or forgejo.'],
+      provider: ['Server type', 'github, gitlab, gitea, forgejo, bitbucket, bitbucket-server, azure, gerrit or scm-manager.'],
+      username: ['User name', 'Only for Bitbucket Cloud and Gerrit: the account the token belongs to.'],
       url: ['Address', 'Address of your server, for example https://git.example.org. Empty for github.com and gitlab.com.'],
       token: ['Access token', 'Token with permission to push branches and open pull requests.'],
       repositories: ['Repositories', 'Comma separated list such as owner/one, owner/two. Empty processes every repository the account can push to.'],
@@ -35,7 +36,8 @@ const CONNECTIONS = {
     name: 'Verbindungen', description: 'Git-Server-Konten, die hier statt in der Weboberfläche festgelegt werden. Dort sind sie schreibgeschützt. Praktisch, um die App allein per Konfiguration einzurichten.',
     fields: {
       name: ['Name', 'Name der Verbindung.'],
-      provider: ['Servertyp', 'github, gitlab, gitea oder forgejo.'],
+      provider: ['Servertyp', 'github, gitlab, gitea, forgejo, bitbucket, bitbucket-server, azure, gerrit oder scm-manager.'],
+      username: ['Benutzername', 'Nur für Bitbucket Cloud und Gerrit: das Konto, zu dem das Token gehört.'],
       url: ['Adresse', 'Adresse deines Servers, zum Beispiel https://git.example.org. Leer für github.com und gitlab.com.'],
       token: ['Zugriffstoken', 'Token mit der Berechtigung, Branches zu pushen und Pull Requests zu öffnen.'],
       repositories: ['Repositories', 'Kommagetrennte Liste wie owner/eins, owner/zwei. Leer verarbeitet jedes Repository, auf das das Konto pushen darf.'],
@@ -72,9 +74,22 @@ function schemaLines(definition, indent) {
   return [`${pad}${name}: ${schemaType(definition)}`];
 }
 
+const CONNECTIONS_SCHEMA = [
+  '  connections:',
+  '    - name: str',
+  '      provider: list(github|gitlab|gitea|forgejo|bitbucket|bitbucket-server|azure|gerrit|scm-manager)',
+  '      url: url?',
+  '      username: str?',
+  '      token: password',
+  '      repositories: str?',
+  '      include: str?',
+  '      exclude: str?',
+];
+
 function buildConfigTail() {
-  const options = ['options:'];
-  const schema = ['schema:'];
+  // The connections come first: that is the order of the configuration page in Home Assistant.
+  const options = ['options:', '  connections: []'];
+  const schema = ['schema:', ...CONNECTIONS_SCHEMA];
   for (const group of GROUPS) {
     const entries = DEFINITIONS.filter((definition) => groupOf(definition.key) === group);
     const defaults = entries.filter((definition) => ['list', 'records'].includes(definition.type));
@@ -82,21 +97,17 @@ function buildConfigTail() {
     else options.push(`  ${group}:`, ...defaults.map((definition) => `    ${nameOf(definition.key)}: []`));
     schema.push(`  ${group}:`, ...entries.flatMap((definition) => schemaLines(definition, 4)));
   }
-  options.push('  connections: []');
-  schema.push('  connections:',
-    '    - name: str',
-    '      provider: list(github|gitlab|gitea|forgejo)',
-    '      url: url?',
-    '      token: password',
-    '      repositories: str?',
-    '      include: str?',
-    '      exclude: str?');
   return [...options, ...schema].join('\n');
 }
 
 function translationFile(code) {
   const messages = locales[code];
   const lines = ['configuration:'];
+  const connections = CONNECTIONS[code];
+  lines.push('  connections:', `    name: ${quote(connections.name)}`, `    description: ${quote(connections.description)}`, '    fields:');
+  for (const [field, [name, description]] of Object.entries(connections.fields)) {
+    lines.push(`      ${field}:`, `        name: ${quote(name)}`, `        description: ${quote(description)}`);
+  }
   for (const group of GROUPS) {
     lines.push(`  ${group}:`, `    name: ${quote(messages[`settings.group.${group}`])}`, `    description: ${quote(messages[`settings.group.${group}.help`])}`, '    fields:');
     for (const definition of DEFINITIONS.filter((candidate) => groupOf(candidate.key) === group)) {
@@ -109,11 +120,6 @@ function translationFile(code) {
         }
       }
     }
-  }
-  const connections = CONNECTIONS[code];
-  lines.push('  connections:', `    name: ${quote(connections.name)}`, `    description: ${quote(connections.description)}`, '    fields:');
-  for (const [field, [name, description]] of Object.entries(connections.fields)) {
-    lines.push(`      ${field}:`, `        name: ${quote(name)}`, `        description: ${quote(description)}`);
   }
   return `${lines.join('\n')}\n`;
 }

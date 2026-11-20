@@ -4,7 +4,7 @@ import { badge, busy, emptyState, notice, reportError, skeleton, toast } from '.
 import { h, mount } from '../dom.mjs';
 import { clock, dateTime, duration, number, relativeTime } from '../format.mjs';
 import { iconDownload, iconRefresh, iconStop } from '../icons.mjs';
-import { t } from '../i18n.mjs';
+import { hasText, t } from '../i18n.mjs';
 import { poll } from '../poll.mjs';
 import { isActive, runBadge, triggerName } from '../status.mjs';
 
@@ -161,7 +161,7 @@ export async function runDetail(container, { params: [idText], navigate }) {
         h('div', {}, h('h1', {}, t('runs.detail_title', { id: run.id })), h('p', {}, `${run.connectionName} · ${triggerName(run.trigger)} · ${dateTime(run.startedAt ?? run.queuedAt)}`)),
         h('div', { class: 'row' }, runBadge(run), run.dryRun ? badge(t('runs.preview_badge'), 'accent') : null,
           isActive(run) ? h('button', { class: 'btn danger', type: 'button', onclick: cancel }, iconStop(), t('runs.cancel')) : run.connectionId ? h('button', { class: 'btn', type: 'button', onclick: again }, iconRefresh(), t('runs.again')) : null)),
-      diagnosis ? notice(run.error === 'no_repositories' ? 'info' : 'danger', t(`diagnosis.${diagnosis}`, { message: run.error })) : null,
+      diagnosis ? notice(run.error === 'no_repositories' ? 'info' : 'danger', hasText(`diagnosis.${diagnosis}`) ? t(`diagnosis.${diagnosis}`) : diagnosis) : null,
       totals ? h('div', { class: 'tiles' },
         [['repositories', totals.repositories], ['prsCreated', totals.prsCreated], ['prsUpdated', totals.prsUpdated], ['pending', totals.pending], ['errors', totals.errors]].map(([key, value]) => h('div', { class: 'tile' }, h('div', { class: 'value' }, number(value)), h('div', { class: 'label' }, t(`runs.tile.${key}`)))),
         h('div', { class: 'tile' }, h('div', { class: 'value' }, duration(run.startedAt, run.finishedAt)), h('div', { class: 'label' }, t('runs.col.duration')))) : null,

@@ -21,6 +21,9 @@ function createProvider(id, label) {
     renovatePlatform: id,
     endpointRequired: true,
     defaultEndpoint: null,
+    credentials: 'token',
+    usernameRequired: false,
+    beta: false,
     webhookEvents: ['push', 'pull_request', 'issues'],
 
     normalizeEndpoint(input) {
@@ -88,6 +91,9 @@ function createProvider(id, label) {
 
     deviceFlow: null,
 
+    // Passkeys, security keys and single sign-on work through the browser, which signs in on Gitea's own page.
+    browserLogin: { scope: SCOPES.join(' '), authorizePath: '/login/oauth/authorize', tokenPath: '/login/oauth/access_token', applicationsPath: '/user/settings/applications' },
+
     webhooks: {
       async register(ctx, repository, { url, secret, events }) {
         const base = `${ctx.endpoint}repos/${repository}/hooks`;
@@ -128,7 +134,7 @@ function createProvider(id, label) {
     },
 
     renovateConnection(connection) {
-      return { platform: id, endpoint: connection.endpoint };
+      return { platform: id, endpoint: connection.endpoint, auth: 'token' };
     },
   };
 }

@@ -15,14 +15,20 @@ function migrate(db, folder) {
     .map((name) => ({ name, version: Number(name.slice(0, 3)) }))
     .filter(({ version }) => version > current);
   for (const { name, version } of pending) {
+    // Rebuilding a table needs foreign keys off, and the setting cannot change inside a transaction.
+    db.exec('PRAGMA foreign_keys = OFF');
     db.exec('BEGIN');
     try {
       db.exec(readFileSync(path.join(folder, name), 'utf8'));
+      const broken = db.prepare('PRAGMA foreign_key_check').all();
+      if (broken.length) throw new Error('the migration broke a foreign key');
       db.exec(`PRAGMA user_version = ${version}`);
       db.exec('COMMIT');
     } catch (error) {
       db.exec('ROLLBACK');
       throw new Error(`Migration ${name} failed: ${error.message}`);
+    } finally {
+      db.exec('PRAGMA foreign_keys = ON');
     }
   }
 }

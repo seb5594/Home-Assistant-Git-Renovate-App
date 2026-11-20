@@ -79,6 +79,9 @@ export async function requestJson(url, { method = 'GET', headers = {}, body, for
   return { status: response.status, headers: response.headers, data };
 }
 
+/** The Authorization header for servers that take a user name with a password or token. */
+export const basicAuth = (username, secret) => `Basic ${Buffer.from(`${username}:${secret}`).toString('base64')}`;
+
 const LINK_NEXT = /<([^>]+)>;\s*rel="next"/;
 
 /** Follows `Link: <...>; rel="next"` (GitHub, Gitea, GitLab) or GitLab's x-next-page until the end. */
@@ -118,4 +121,21 @@ export function parseBaseUrl(input) {
     throw new AppError(400, 'invalid_address', 'The address must start with http:// or https://');
   }
   return { origin: url.origin, host: url.host, path: url.pathname.replace(/\/+$/, '') };
+}
+
+/**
+ * Pagination for servers that put the list inside an object. `step(data, url)` returns the items of the page and
+ * the address of the next one (or null).
+ * @param {string} firstUrl
+ * @param {object} options passed to requestJson
+ * @param {(data:any, url:string) => {items:any[], next:string|null}} step
+ */
+export async function* paginateWith(firstUrl, options, step, { maxPages = 200 } = {}) {
+  let url = firstUrl;
+  for (let page = 0; url && page < maxPages; page += 1) {
+    const { data } = await requestJson(url, options);
+    const { items, next } = step(data, url);
+    yield* items;
+    url = next;
+  }
 }

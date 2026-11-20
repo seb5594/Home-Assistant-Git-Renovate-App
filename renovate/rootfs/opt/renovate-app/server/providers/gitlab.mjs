@@ -17,6 +17,10 @@ export const gitlab = {
   renovatePlatform: 'gitlab',
   endpointRequired: false,
   defaultEndpoint: DEFAULT_API,
+  credentials: 'token',
+  usernameRequired: false,
+  beta: false,
+
   webhookEvents: ['push', 'merge_requests', 'issues'],
 
   normalizeEndpoint(input) {
@@ -65,9 +69,10 @@ export const gitlab = {
     }
   },
 
-  // GitLab's device grant issues tokens that expire after two hours, which a scheduled job cannot use
-  // without refresh logic. Personal access tokens are the dependable choice, so no device flow here.
+  // GitLab's device grant is not used: its tokens expire after two hours. The sign-in through the browser
+  // (authorization code with PKCE) renews them before every run, see oauth.mjs.
   deviceFlow: null,
+  browserLogin: { scope: 'api write_repository', authorizePath: '/oauth/authorize', tokenPath: '/oauth/token', applicationsPath: '/-/user_settings/applications' },
 
   webhooks: {
     async register(ctx, repository, { url, secret }) {
@@ -109,6 +114,6 @@ export const gitlab = {
   },
 
   renovateConnection(connection) {
-    return { platform: 'gitlab', endpoint: connection.endpoint === DEFAULT_API ? null : connection.endpoint };
+    return { platform: 'gitlab', endpoint: connection.endpoint === DEFAULT_API ? null : connection.endpoint, auth: 'token' };
   },
 };

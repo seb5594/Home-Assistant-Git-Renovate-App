@@ -297,3 +297,15 @@ test('a connection without enabled repositories does nothing and says so', async
   assert.equal(done.status, 'succeeded');
   assert.equal(done.error, 'no_repositories');
 });
+
+test('with a run-as user the run folders are handed over and Renovate starts as that user', async (t) => {
+  const env = await createEnvironment(t);
+  const uid = process.getuid();
+  const gid = process.getgid();
+  env.paths.runAs = { uid, gid };
+  const connection = await env.connect();
+  env.settings.update({ 'advanced.extra_env': [{ name: 'FAKE_DUMP', value: path.join(env.dir, 'dump.json') }] });
+  const done = await env.finished(env.queue.enqueue({ connectionId: connection.id, trigger: 'manual' }).run.id);
+  assert.equal(done.status, 'succeeded');
+  assert.equal(JSON.parse(readFileSync(path.join(env.dir, 'dump.json'), 'utf8'))[0].config.platform, 'gitea');
+});

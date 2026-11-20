@@ -23,6 +23,10 @@ export const github = {
   renovatePlatform: 'github',
   endpointRequired: false,
   defaultEndpoint: DEFAULT_API,
+  credentials: 'token',
+  usernameRequired: false,
+  beta: false,
+  browserLogin: null,
   // The pull request events of Renovate itself and the Dependency Dashboard issue are the useful triggers.
   webhookEvents: ['push', 'pull_request', 'issues'],
 
@@ -146,6 +150,6 @@ export const github = {
 
   /** What Renovate needs to talk to this provider. */
   renovateConnection(connection) {
-    return { platform: 'github', endpoint: connection.endpoint === DEFAULT_API ? null : connection.endpoint };
+    return { platform: 'github', endpoint: connection.endpoint === DEFAULT_API ? null : connection.endpoint, auth: 'token' };
   },
 };

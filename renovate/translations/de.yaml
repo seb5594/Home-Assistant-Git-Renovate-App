@@ -1,74 +1,32 @@
 configuration:
-  general:
-    name: "Darstellung"
-    description: "Sprache, Farben und Protokollierung."
+  connections:
+    name: "Verbindungen"
+    description: "Git-Server-Konten, die hier statt in der Weboberfläche festgelegt werden. Dort sind sie schreibgeschützt. Praktisch, um die App allein per Konfiguration einzurichten."
     fields:
-      language:
-        name: "Sprache"
-        description: "Automatisch folgt Home Assistant."
-      theme:
-        name: "Design"
-        description: "Automatisch folgt Home Assistant, dann deinem System."
-      accent:
-        name: "Akzentfarbe"
-        description: "Blau ist die Vorgabe. Home Assistant übernimmt die Primärfarbe deines Home-Assistant-Designs."
-      accent_color:
-        name: "Eigene Akzentfarbe"
-        description: "Wird verwendet, wenn die Akzentfarbe auf „Eigene“ steht. Format #RRGGBB."
-      log_level:
-        name: "Protokollstufe der App"
-        description: "Wie viel die App ins Protokoll schreibt. Den Detailgrad von Renovate selbst stellst du unter Erweitert ein."
-      timezone:
-        name: "Zeitzone"
-        description: "Wird für den Zeitplan verwendet, zum Beispiel Europe/Berlin. Leer nutzt die Zeitzone von Home Assistant."
-  schedule:
-    name: "Zeitplan"
-    description: "Wann Renovate von selbst läuft."
-    fields:
-      mode:
-        name: "Automatische Läufe"
-        description: "Cron nutzt einen Zeitplan, Intervall wiederholt nach fester Zeit, Manuell startet nie von selbst."
-      cron:
-        name: "Cron-Zeitplan"
-        description: "Fünf Felder: Minute Stunde Tag Monat Wochentag. 0 */6 * * * bedeutet alle sechs Stunden."
-      interval_minutes:
-        name: "Intervall (Minuten)"
-        description: "Wird verwendet, wenn die automatischen Läufe auf Intervall stehen."
-      run_on_start:
-        name: "Beim Start der App ausführen"
-        description: "Startet kurz nach dem Start der App einen Lauf."
-  resources:
-    name: "Ressourcen"
-    description: "Wie viel von diesem Gerät ein Lauf nutzen darf. Das automatische Profil passt sich dem Arbeitsspeicher an."
-    fields:
-      profile:
-        name: "Ressourcenprofil"
-        description: "Sparsam für einen Raspberry Pi, Ausgewogen für die meisten Systeme, Leistung für starke Geräte. Automatisch wählt nach Arbeitsspeicher."
-      max_concurrent_runs:
-        name: "Parallele Läufe"
-        description: "Wie viele Verbindungen gleichzeitig verarbeitet werden. Überschreibt das Profil."
-      memory_limit_mb:
-        name: "Speicher pro Lauf (MB)"
-        description: "Obergrenze für den Speicher eines Renovate-Prozesses. Überschreibt das Profil."
-      batch_size:
-        name: "Repositories pro Durchgang"
-        description: "Renovate wird nach dieser Anzahl neu gestartet, das hält den Speicherbedarf niedrig. Überschreibt das Profil."
-      cpu_priority:
-        name: "CPU-Rücksichtnahme"
-        description: "0 ist normal, 19 am rücksichtsvollsten. Höhere Werte halten Home Assistant flüssig. Überschreibt das Profil."
-      run_timeout_minutes:
-        name: "Zeitlimit pro Lauf (Minuten)"
-        description: "Ein Lauf, der länger dauert, wird gestoppt."
-  history:
-    name: "Verlauf"
-    description: "Wie lange Läufe und ihre Protokolle aufbewahrt werden."
-    fields:
-      keep_runs:
-        name: "Aufzubewahrende Läufe"
-        description: "Ältere Läufe werden entfernt."
-      keep_log_days:
-        name: "Tage für Protokolle"
-        description: "Ältere Läufe werden samt Protokoll entfernt."
+      name:
+        name: "Name"
+        description: "Name der Verbindung."
+      provider:
+        name: "Servertyp"
+        description: "github, gitlab, gitea, forgejo, bitbucket, bitbucket-server, azure, gerrit oder scm-manager."
+      username:
+        name: "Benutzername"
+        description: "Nur für Bitbucket Cloud und Gerrit: das Konto, zu dem das Token gehört."
+      url:
+        name: "Adresse"
+        description: "Adresse deines Servers, zum Beispiel https://git.example.org. Leer für github.com und gitlab.com."
+      token:
+        name: "Zugriffstoken"
+        description: "Token mit der Berechtigung, Branches zu pushen und Pull Requests zu öffnen."
+      repositories:
+        name: "Repositories"
+        description: "Kommagetrennte Liste wie owner/eins, owner/zwei. Leer verarbeitet jedes Repository, auf das das Konto pushen darf."
+      include:
+        name: "Einschluss-Muster"
+        description: "Kommagetrennte Muster wie my-org/*. Nur wirksam, wenn keine Repositories aufgelistet sind."
+      exclude:
+        name: "Ausschluss-Muster"
+        description: "Kommagetrennte Muster, die nie verarbeitet werden."
   renovate:
     name: "Renovate"
     description: "Standardwerte für alle Repositories. Eine renovate.json im Repository kann die meisten überschreiben."
@@ -122,6 +80,54 @@ configuration:
       config_file:
         name: "Konfigurationsdatei im App-Ordner"
         description: "Eine JSON-Datei mit Renovate-Optionen im Konfigurationsordner der App (addon_configs). Wird über die obigen Standardwerte gelegt."
+  history:
+    name: "Verlauf"
+    description: "Wie lange Läufe und ihre Protokolle aufbewahrt werden."
+    fields:
+      keep_runs:
+        name: "Aufzubewahrende Läufe"
+        description: "Ältere Läufe werden entfernt."
+      keep_log_days:
+        name: "Tage für Protokolle"
+        description: "Ältere Läufe werden samt Protokoll entfernt."
+  resources:
+    name: "Ressourcen"
+    description: "Wie viel von diesem Gerät ein Lauf nutzen darf. Das automatische Profil passt sich dem Arbeitsspeicher an."
+    fields:
+      profile:
+        name: "Ressourcenprofil"
+        description: "Sparsam für einen Raspberry Pi, Ausgewogen für die meisten Systeme, Leistung für starke Geräte. Automatisch wählt nach Arbeitsspeicher."
+      max_concurrent_runs:
+        name: "Parallele Läufe"
+        description: "Wie viele Verbindungen gleichzeitig verarbeitet werden. Überschreibt das Profil."
+      memory_limit_mb:
+        name: "Speicher pro Lauf (MB)"
+        description: "Obergrenze für den Speicher eines Renovate-Prozesses. Überschreibt das Profil."
+      batch_size:
+        name: "Repositories pro Durchgang"
+        description: "Renovate wird nach dieser Anzahl neu gestartet, das hält den Speicherbedarf niedrig. Überschreibt das Profil."
+      cpu_priority:
+        name: "CPU-Rücksichtnahme"
+        description: "0 ist normal, 19 am rücksichtsvollsten. Höhere Werte halten Home Assistant flüssig. Überschreibt das Profil."
+      run_timeout_minutes:
+        name: "Zeitlimit pro Lauf (Minuten)"
+        description: "Ein Lauf, der länger dauert, wird gestoppt."
+  schedule:
+    name: "Zeitplan"
+    description: "Wann Renovate von selbst läuft."
+    fields:
+      mode:
+        name: "Automatische Läufe"
+        description: "Cron nutzt einen Zeitplan, Intervall wiederholt nach fester Zeit, Manuell startet nie von selbst."
+      cron:
+        name: "Cron-Zeitplan"
+        description: "Fünf Felder: Minute Stunde Tag Monat Wochentag. 0 */6 * * * bedeutet alle sechs Stunden."
+      interval_minutes:
+        name: "Intervall (Minuten)"
+        description: "Wird verwendet, wenn die automatischen Läufe auf Intervall stehen."
+      run_on_start:
+        name: "Beim Start der App ausführen"
+        description: "Startet kurz nach dem Start der App einen Lauf."
   webhooks:
     name: "Webhooks"
     description: "Der Git-Server löst Läufe aus, wenn etwas passiert."
@@ -154,6 +160,28 @@ configuration:
       failure_notification:
         name: "Bei Fehlern benachrichtigen"
         description: "Zeigt in Home Assistant eine Benachrichtigung, wenn ein Lauf fehlschlägt."
+  general:
+    name: "Darstellung"
+    description: "Sprache, Farben und Protokollierung."
+    fields:
+      language:
+        name: "Sprache"
+        description: "Automatisch folgt Home Assistant."
+      theme:
+        name: "Design"
+        description: "Automatisch folgt Home Assistant, dann deinem System."
+      accent:
+        name: "Akzentfarbe"
+        description: "Blau ist die Vorgabe. Home Assistant übernimmt die Primärfarbe deines Home-Assistant-Designs."
+      accent_color:
+        name: "Eigene Akzentfarbe"
+        description: "Wird verwendet, wenn die Akzentfarbe auf „Eigene“ steht. Format #RRGGBB."
+      log_level:
+        name: "Protokollstufe der App"
+        description: "Wie viel die App ins Protokoll schreibt. Den Detailgrad von Renovate selbst stellst du unter Erweitert ein."
+      timezone:
+        name: "Zeitzone"
+        description: "Wird für den Zeitplan verwendet, zum Beispiel Europe/Berlin. Leer nutzt die Zeitzone von Home Assistant."
   advanced:
     name: "Erweitert"
     description: "Für Sonderfälle: Zertifikate, zusätzliche Werkzeuge, Umgebungsvariablen."
@@ -183,28 +211,3 @@ configuration:
       github_client_id:
         name: "GitHub-OAuth-Client-ID"
         description: "Nutze deine eigene GitHub-OAuth-App (mit aktiviertem Device Flow) für die Anmeldung per Code."
-  connections:
-    name: "Verbindungen"
-    description: "Git-Server-Konten, die hier statt in der Weboberfläche festgelegt werden. Dort sind sie schreibgeschützt. Praktisch, um die App allein per Konfiguration einzurichten."
-    fields:
-      name:
-        name: "Name"
-        description: "Name der Verbindung."
-      provider:
-        name: "Servertyp"
-        description: "github, gitlab, gitea oder forgejo."
-      url:
-        name: "Adresse"
-        description: "Adresse deines Servers, zum Beispiel https://git.example.org. Leer für github.com und gitlab.com."
-      token:
-        name: "Zugriffstoken"
-        description: "Token mit der Berechtigung, Branches zu pushen und Pull Requests zu öffnen."
-      repositories:
-        name: "Repositories"
-        description: "Kommagetrennte Liste wie owner/eins, owner/zwei. Leer verarbeitet jedes Repository, auf das das Konto pushen darf."
-      include:
-        name: "Einschluss-Muster"
-        description: "Kommagetrennte Muster wie my-org/*. Nur wirksam, wenn keine Repositories aufgelistet sind."
-      exclude:
-        name: "Ausschluss-Muster"
-        description: "Kommagetrennte Muster, die nie verarbeitet werden."

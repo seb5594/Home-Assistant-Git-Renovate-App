@@ -51,7 +51,7 @@ RUN find /etc/s6-overlay/s6-rc.d -type f \( -name run -o -name finish \) -exec c
 
 ENV NODE_ENV=production
 
-ARG BUILD_VERSION=2026.11.20.2
+ARG BUILD_VERSION=2026.11.20.3
 RUN mkdir -p /etc/renovate-app && echo "${BUILD_VERSION}" >/etc/renovate-app/version
 LABEL io.hass.version="${BUILD_VERSION}" \
     io.hass.type="addon" \

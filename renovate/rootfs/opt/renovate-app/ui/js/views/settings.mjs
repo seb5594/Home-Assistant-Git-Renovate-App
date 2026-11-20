@@ -7,7 +7,6 @@ import { iconLock, iconPlus, iconRefresh, iconTrash } from '../icons.mjs';
 import { dateTime } from '../format.mjs';
 import { hasText, t } from '../i18n.mjs';
 
-const GROUPS = ['general', 'schedule', 'resources', 'history', 'renovate', 'webhooks', 'home_assistant', 'advanced'];
 const SAVE_DELAY_MS = 700;
 
 const label = (key) => t(`settings.${key}.label`);
@@ -168,7 +167,7 @@ export async function settingsView(container, context) {
       h('div', { class: 'page-head' }, h('div', {}, h('h1', {}, t('settings.title')), h('p', {}, t('settings.subtitle')))),
       notice('info', t('settings.how_it_works')),
       configurationCard(),
-      GROUPS.map(group), maintenance());
+      data.groups.map(group), maintenance());
   }
 
   paint();

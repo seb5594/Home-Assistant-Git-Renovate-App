@@ -8,7 +8,9 @@ import { providerName } from '../status.mjs';
 import { repositoriesTab } from './connections.mjs';
 
 const STEPS = ['server', 'connect', 'repositories', 'done'];
-const SELF_HOSTED_ONLY = ['gitea', 'forgejo'];
+// Servers that exist as a hosted service and as software you run yourself: the address is optional there.
+const HOSTED_OPTION = ['github', 'gitlab'];
+const GITEA_FAMILY = ['gitea', 'forgejo'];
 
 export async function wizard(container, { boot, navigate }) {
   const state = { step: 0, provider: null, selfHosted: false, endpoint: '', method: null, verified: null, connection: null, discovered: [] };
@@ -16,7 +18,7 @@ export async function wizard(container, { boot, navigate }) {
 
   const stop = () => clearTimeout(pollTimer);
   const providerInfo = () => boot.providers.find((provider) => provider.id === state.provider);
-  const needsAddress = () => SELF_HOSTED_ONLY.includes(state.provider) || state.selfHosted;
+  const needsAddress = () => Boolean(providerInfo().endpointRequired) || state.selfHosted;
 
   function frame(...content) {
     mount(container,
@@ -31,7 +33,12 @@ export async function wizard(container, { boot, navigate }) {
     state.step = 0;
     frame(h('div', { class: 'provider-grid' }, boot.providers.map((provider) => h('button', { class: 'provider-card', type: 'button', onclick: () => select(provider.id) },
       h('strong', {}, provider.label), h('span', { class: 'muted small' }, t(`wizard.provider.${provider.id}`)),
-      provider.deviceFlow ? badge(t('wizard.badge.code'), 'accent') : provider.credentialLogin ? badge(t('wizard.badge.password'), 'accent') : badge(t('wizard.badge.token'))))));
+      h('div', { class: 'row' },
+        provider.deviceFlow ? badge(t('wizard.badge.code'), 'accent') : null,
+        provider.credentialLogin ? badge(t('wizard.badge.password'), 'accent') : null,
+        provider.browserLogin ? badge(t('wizard.badge.browser'), 'accent') : null,
+        !provider.deviceFlow && !provider.credentialLogin && !provider.browserLogin ? badge(t('wizard.badge.token')) : null,
+        provider.beta ? badge(t('wizard.badge.beta'), 'warn') : null)))));
   }
 
   async function select(provider) {
@@ -39,14 +46,15 @@ export async function wizard(container, { boot, navigate }) {
     state.selfHosted = false;
     state.endpoint = '';
     state.verified = null;
-    state.method = providerInfo().deviceFlow ? 'device' : providerInfo().credentialLogin ? 'password' : 'token';
+    state.method = availableMethods()[0];
     state.discovered = [];
     connectStep();
-    if (SELF_HOSTED_ONLY.includes(provider)) {
+    if (GITEA_FAMILY.includes(provider)) {
       try {
         state.discovered = (await api.post('connect/discover')).found;
-        if (state.discovered.length && !state.endpoint) state.endpoint = state.discovered[0].url;
-        if (state.step === 1) connectStep();
+        // The search takes a moment. It only fills in the address field and its hint, never rebuilds the step:
+        // the user may already be typing in it.
+        if (state.provider === provider && state.step === 1) showDiscovered();
       } catch {
         // Discovery is a convenience only.
       }
@@ -56,24 +64,46 @@ export async function wizard(container, { boot, navigate }) {
   // --- step 2 ------------------------------------------------------------------------------------------
   function addressField() {
     if (!needsAddress()) {
-      return providerInfo().id === 'github' || providerInfo().id === 'gitlab'
+      return HOSTED_OPTION.includes(state.provider)
         ? h('label', { class: 'check' }, h('input', { type: 'checkbox', checked: state.selfHosted, onchange: (event) => { state.selfHosted = event.target.checked; connectStep(); } }),
           h('span', {}, t(`wizard.self_hosted.${state.provider}`)))
         : null;
     }
-    const input = h('input', { type: 'url', value: state.endpoint, placeholder: t(`wizard.address.placeholder.${state.provider}`), autocomplete: 'off', oninput: (event) => { state.endpoint = event.target.value.trim(); } });
+    const input = h('input', { type: 'url', value: state.endpoint, placeholder: t(`wizard.address.placeholder.${state.provider}`), autocomplete: 'off', oninput: (event) => { state.endpoint = event.target.value.trim(); }, onchange: () => state.refreshGuide?.() });
+    state.addressInput = input;
+    state.discoveredSlot = h('div');
+    showDiscovered();
     return h('div', { class: 'stack' },
       h('label', { class: 'field' }, t('wizard.address'), input, h('span', { class: 'hint' }, t('wizard.address_hint'))),
-      state.discovered.length ? notice('ok', h('div', {}, t('wizard.discovered', { url: state.discovered[0].url, version: state.discovered[0].version })),
-        h('div', {}, h('button', { class: 'btn small', type: 'button', onclick: () => { state.endpoint = state.discovered[0].url; input.value = state.endpoint; } }, t('wizard.use_found')))) : null,
-      !SELF_HOSTED_ONLY.includes(state.provider) ? h('label', { class: 'check' }, h('input', { type: 'checkbox', checked: true, onchange: (event) => { state.selfHosted = event.target.checked; connectStep(); } }), h('span', {}, t(`wizard.self_hosted.${state.provider}`))) : null);
+      state.discoveredSlot,
+      HOSTED_OPTION.includes(state.provider) ? h('label', { class: 'check' }, h('input', { type: 'checkbox', checked: true, onchange: (event) => { state.selfHosted = event.target.checked; connectStep(); } }), h('span', {}, t(`wizard.self_hosted.${state.provider}`))) : null);
   }
 
-  function methodTabs() {
+  /** The ways to sign in to the chosen server, easiest first. */
+  function availableMethods() {
     const methods = [];
     if (providerInfo().deviceFlow) methods.push('device');
     if (providerInfo().credentialLogin) methods.push('password');
+    if (providerInfo().browserLogin) methods.push('browser');
     methods.push('token');
+    return methods;
+  }
+
+  /** Shows the Gitea app that was found in Home Assistant, and fills the address if it is still empty. */
+  function showDiscovered() {
+    const [found] = state.discovered;
+    if (!found || !state.discoveredSlot) return;
+    if (!state.endpoint) {
+      state.endpoint = found.url;
+      state.addressInput.value = found.url;
+      state.refreshGuide?.();
+    }
+    mount(state.discoveredSlot, notice('ok', h('div', {}, t('wizard.discovered', { url: found.url, version: found.version })),
+      h('div', {}, h('button', { class: 'btn small', type: 'button', onclick: () => { state.endpoint = found.url; state.addressInput.value = found.url; state.refreshGuide?.(); } }, t('wizard.use_found')))));
+  }
+
+  function methodTabs() {
+    const methods = availableMethods();
     if (methods.length === 1) return null;
     return h('div', { class: 'tabs', role: 'tablist' }, methods.map((method) => h('button', { type: 'button', role: 'tab', aria: { selected: String(state.method === method) }, onclick: () => { stop(); state.method = method; connectStep(); } }, t(`wizard.method.${method}`))));
   }
@@ -87,6 +117,7 @@ export async function wizard(container, { boot, navigate }) {
 
   function tokenMethod() {
     const input = h('input', { type: 'password', autocomplete: 'off', placeholder: t('wizard.token.placeholder') });
+    const user = providerInfo().usernameRequired ? h('input', { type: 'text', autocomplete: 'username', placeholder: t('wizard.username') }) : null;
     const guide = h('div', { class: 'stack' });
     const loadGuide = async () => {
       try {
@@ -94,7 +125,7 @@ export async function wizard(container, { boot, navigate }) {
         mount(guide,
           h('ol', { class: 'ordered' },
             h('li', {}, t(`wizard.token.step1.${state.provider}`)),
-            h('li', {}, t('wizard.token.step2', { scopes: info.scopes.join(', ') })),
+            h('li', {}, info.scopes.length ? t('wizard.token.step2', { scopes: info.scopes.join(', ') }) : t('wizard.token.step2_none')),
             h('li', {}, t('wizard.token.step3'))),
           h('div', { class: 'row' },
             h('a', { class: 'btn outline', href: info.url, target: '_blank', rel: 'noopener noreferrer' }, iconExternal(), t('wizard.token.create', { name: providerName(state.provider) })),
@@ -104,11 +135,13 @@ export async function wizard(container, { boot, navigate }) {
       }
     };
     loadGuide();
+    state.refreshGuide = loadGuide;
     return h('div', { class: 'stack' }, guide,
-      h('label', { class: 'field' }, t('wizard.token.label'), input),
+      user ? h('label', { class: 'field' }, t('wizard.username'), user, h('span', { class: 'hint' }, t(`wizard.username.hint.${state.provider}`))) : null,
+      h('label', { class: 'field' }, providerInfo().credentials === 'password' ? t('wizard.token.label_password') : t('wizard.token.label'), input),
       h('div', {}, h('button', { class: 'btn primary', type: 'button', onclick: (event) => busy(event.currentTarget, async () => {
         try {
-          await verified(await api.post('connect/verify', { provider: state.provider, endpoint: endpointForRequest(), token: input.value.trim() }));
+          await verified(await api.post('connect/verify', { provider: state.provider, endpoint: endpointForRequest(), token: input.value.trim(), username: user?.value.trim() }));
         } catch (error) {
           reportError(error);
         }
@@ -170,6 +203,65 @@ export async function wizard(container, { boot, navigate }) {
     return area;
   }
 
+  /** Sign in on the server's own page, so a passkey, a security key or single sign-on works as it does there. */
+  function browserMethod() {
+    const name = providerName(state.provider);
+    const guide = h('div', { class: 'stack' });
+    const clientId = h('input', { type: 'text', autocomplete: 'off', placeholder: t('wizard.browser.client_id_placeholder') });
+    const signIn = h('div', { class: 'stack' });
+    let flowId = null;
+
+    const loadGuide = async () => {
+      try {
+        const info = await api.get(`connect/browser-guide?provider=${state.provider}&endpoint=${encodeURIComponent(endpointForRequest())}`);
+        const copy = (value) => h('button', { class: 'btn small', type: 'button', onclick: async () => { await navigator.clipboard?.writeText(value).catch(() => {}); toast(t('common.copied')); } }, t('common.copy'));
+        mount(guide,
+          h('h3', {}, t('wizard.browser.register_title', { name })),
+          h('p', { class: 'muted' }, t('wizard.browser.register_text')),
+          h('ul', { class: 'ordered' },
+            h('li', {}, t('wizard.browser.value_name')),
+            h('li', {}, t('wizard.browser.value_redirect'), ' ', h('code', {}, info.redirectUri), ' ', copy(info.redirectUri)),
+            h('li', {}, t('wizard.browser.value_public')),
+            state.provider === 'gitlab' ? h('li', {}, t('wizard.browser.value_scopes', { scopes: info.scope })) : null),
+          h('div', {}, h('a', { class: 'btn outline', href: info.appsUrl, target: '_blank', rel: 'noopener noreferrer' }, iconExternal(), t('wizard.browser.open_apps', { name }))));
+      } catch (error) {
+        mount(guide, h('p', { class: 'muted' }, errorText(error)));
+      }
+    };
+    loadGuide();
+    state.refreshGuide = loadGuide;
+
+    const pasted = h('textarea', { rows: '3', placeholder: 'http://127.0.0.1:5594/callback?code=…', 'aria-label': t('wizard.browser.paste') });
+    const begin = (event) => busy(event.currentTarget, async () => {
+      try {
+        const started = await api.post('connect/browser/start', { provider: state.provider, endpoint: endpointForRequest(), clientId: clientId.value.trim() });
+        flowId = started.flowId;
+        mount(signIn,
+          h('h3', {}, t('wizard.browser.sign_in_title')),
+          h('div', {}, h('a', { class: 'btn primary', href: started.authorizeUrl, target: '_blank', rel: 'noopener noreferrer' }, iconExternal(), t('wizard.browser.open_login', { name }))),
+          notice('info', t('wizard.browser.after')),
+          h('label', { class: 'field' }, t('wizard.browser.paste'), pasted),
+          h('div', {}, h('button', { class: 'btn primary', type: 'button', onclick: (finish) => busy(finish.currentTarget, async () => {
+            try {
+              await verified(await api.post('connect/browser/finish', { flowId, pasted: pasted.value.trim() }));
+            } catch (error) {
+              reportError(error);
+            }
+          }) }, t('wizard.browser.finish'))));
+      } catch (error) {
+        reportError(error);
+      }
+    });
+
+    return h('div', { class: 'stack' },
+      notice('info', t('wizard.browser.explain', { name })),
+      guide,
+      h('label', { class: 'field' }, t('wizard.browser.client_id'), clientId, h('span', { class: 'hint' }, t('wizard.browser.client_id_hint'))),
+      h('div', {}, h('button', { class: 'btn', type: 'button', onclick: begin }, t('wizard.browser.start'))),
+      signIn,
+      h('p', { class: 'hint' }, t('wizard.browser.renews')));
+  }
+
   function verifiedCard() {
     const { account, repositoryCount, pushableCount, warnings } = state.verified;
     const name = h('input', { type: 'text', value: `${providerName(state.provider)} ${account.login}`, maxlength: '60' });
@@ -195,9 +287,11 @@ export async function wizard(container, { boot, navigate }) {
     state.step = 1;
     stop();
     if (state.verified) return frame(h('section', { class: 'card stack' }, verifiedCard()));
-    const methodView = { device: deviceMethod, password: passwordMethod, token: tokenMethod }[state.method];
+    state.refreshGuide = null;
+    const methodView = { device: deviceMethod, password: passwordMethod, browser: browserMethod, token: tokenMethod }[state.method];
     return frame(h('section', { class: 'card stack' },
       h('h2', {}, t('wizard.connect_to', { name: providerName(state.provider) })),
+      providerInfo().beta ? notice('warn', t('wizard.beta_hint')) : null,
       addressField(), methodTabs(), methodView(),
       h('div', {}, h('button', { class: 'btn ghost', type: 'button', onclick: chooseServer }, t('common.back')))));
   }

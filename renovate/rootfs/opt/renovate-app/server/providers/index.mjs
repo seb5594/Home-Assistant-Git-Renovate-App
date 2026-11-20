@@ -4,8 +4,13 @@ import { AppError } from '../util/errors.mjs';
 import { forgejo, gitea } from './gitea.mjs';
 import { github } from './github.mjs';
 import { gitlab } from './gitlab.mjs';
+import { azure } from './azure.mjs';
+import { bitbucket } from './bitbucket.mjs';
+import { bitbucketServer } from './bitbucket-server.mjs';
+import { gerrit } from './gerrit.mjs';
+import { scmManager } from './scm-manager.mjs';
 
-export const providers = Object.freeze({ github, gitlab, gitea, forgejo });
+export const providers = Object.freeze({ github, gitlab, gitea, forgejo, bitbucket, 'bitbucket-server': bitbucketServer, azure, gerrit, 'scm-manager': scmManager });
 
 export function getProvider(id) {
   const provider = providers[id];
@@ -23,7 +28,12 @@ export function describeProviders({ githubClientId } = {}) {
     label: provider.label,
     endpointRequired: provider.endpointRequired,
     defaultEndpoint: provider.defaultEndpoint,
+    credentials: provider.credentials,
+    usernameRequired: provider.usernameRequired,
+    beta: provider.beta,
     deviceFlow: Boolean(provider.deviceFlow && githubClientId),
     credentialLogin: Boolean(provider.credentialLogin),
+    browserLogin: Boolean(provider.browserLogin),
+    webhooks: Boolean(provider.webhooks),
   }));
 }

@@ -24,9 +24,11 @@ const TIME_ZONE = (value) => {
 
 const ENV_NAME = /^[A-Za-z_][A-Za-z0-9_]*$/;
 // Names that the app itself controls for every run; an override would break the connection to the git server.
-export const RESERVED_ENV = /^(RENOVATE_(TOKEN|PLATFORM|ENDPOINT|CONFIG_FILE|BASE_DIR|CACHE_DIR|REPOSITORIES|AUTODISCOVER)|GITHUB_COM_TOKEN|NODE_OPTIONS|HOME|PATH)$/;
+export const RESERVED_ENV = /^(RENOVATE_(TOKEN|USERNAME|PASSWORD|PLATFORM|ENDPOINT|CONFIG_FILE|BASE_DIR|CACHE_DIR|REPOSITORIES|AUTODISCOVER)|GITHUB_COM_TOKEN|NODE_OPTIONS|HOME|PATH)$/;
 
-export const GROUPS = ['general', 'schedule', 'resources', 'history', 'renovate', 'webhooks', 'home_assistant', 'advanced'];
+// The order of the groups is the order on the configuration page of Home Assistant and in the web interface.
+// The list of connections (defined in tools/sync-config.mjs) always comes first.
+export const GROUPS = ['renovate', 'history', 'resources', 'schedule', 'webhooks', 'home_assistant', 'general', 'advanced'];
 
 /** @type {Array<Record<string, any>>} */
 export const DEFINITIONS = [
@@ -83,7 +85,7 @@ export const DEFINITIONS = [
 
   // --- webhooks --------------------------------------------------------------------------------
   { key: 'webhooks.enabled', type: 'bool', default: false, scope: 'live' },
-  { key: 'webhooks.port', type: 'int', min: 1024, max: 65535, default: 8092, scope: 'live' },
+  { key: 'webhooks.port', type: 'int', min: 1024, max: 65535, default: 5594, scope: 'live' },
   { key: 'webhooks.public_url', type: 'url', scope: 'live' },
   { key: 'webhooks.debounce_seconds', type: 'int', min: 5, max: 3600, default: 60, scope: 'live' },
   { key: 'webhooks.ignore_own_events', type: 'bool', default: true, scope: 'live', advanced: true },

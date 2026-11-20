@@ -26,6 +26,8 @@ http.createServer((req, res) => {
     res.end(JSON.stringify(body));
   };
   const { pathname } = new URL(req.url, 'http://x');
+  // The OAuth endpoints of the fake Gitea, for the sign-in through the browser.
+  if (pathname === '/login/oauth/access_token') return json({ access_token: 'dev-token', refresh_token: 'dev-refresh', expires_in: 3600 });
   if (pathname === '/api/v1/version') return json({ version: '1.22.0' });
   if (pathname === '/api/v1/user') return json({ id: 1, login: 'sven', full_name: 'Sven Example', email: 'sven@example.com', avatar_url: 'http://127.0.0.1:3999/avatar.png' });
   if (pathname === '/api/v1/user/repos') return json(REPOSITORIES);
