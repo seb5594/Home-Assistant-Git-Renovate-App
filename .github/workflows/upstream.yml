@@ -1,0 +1,55 @@
+name: Follow upstream releases
+
+# A new release of the packaged software becomes a new version of the app by itself:
+# the engine script changes the pin in the Dockerfile and raises the app version
+# (see .scripts/upstream.py in the engine), then explicitly starts the release pipeline.
+
+on:
+  schedule:
+    - cron: '41 4 * * *'
+  workflow_dispatch:
+  pull_request:
+    branches: [dev, main]
+
+permissions:
+  contents: write
+  actions: write
+
+jobs:
+  follow:
+    if: github.event_name != 'pull_request'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          # Repository writes use the scoped workflow token; the PAT only reads the engine.
+          token: ${{ github.token }}
+      - uses: actions/checkout@v7
+        with:
+          repository: seb5594/hass-workflows
+          ref: 4a2d1020853a4aeb2f748e4c5a24b06dfc72c501
+          token: ${{ secrets.ORCHESTRATION_PAT }}
+          path: .engine
+          persist-credentials: false
+      - uses: ./.engine/.actions/follow-upstream
+
+  renovate:
+    # Renovate raises base image and package pins; each such pull request also needs a new app version.
+    if: github.event_name == 'pull_request' && github.actor == 'renovate[bot]' && github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ github.head_ref }}
+          fetch-depth: 0
+          token: ${{ github.token }}
+      - uses: actions/checkout@v7
+        with:
+          repository: seb5594/hass-workflows
+          ref: 4a2d1020853a4aeb2f748e4c5a24b06dfc72c501
+          token: ${{ secrets.ORCHESTRATION_PAT }}
+          path: .engine
+          persist-credentials: false
+      - uses: ./.engine/.actions/bump-upstream

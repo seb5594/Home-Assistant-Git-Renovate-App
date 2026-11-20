@@ -1,5 +1,5 @@
 # Changelog
 
-## 0.1.0
+## 2026.11.20
 
-- ✨ Initial version created from the app template.
+- ✨ First release (experimental). Renovate 44.256.1 with a web interface inside Home Assistant: connect GitHub, GitLab, Gitea or Forgejo, choose repositories, run on a schedule or on webhooks, follow every run live.

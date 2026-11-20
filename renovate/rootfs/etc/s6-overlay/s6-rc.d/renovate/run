@@ -1,0 +1,79 @@
+#!/usr/bin/with-contenv bashio
+# shellcheck shell=bash
+# Prepares the container (extra packages, certificates, data folders) and then runs the app's server
+# as an unprivileged user. Renovate runs package managers on repositories that other people may change,
+# so nothing in this container should run as root longer than needed.
+
+bashio::log.level info
+
+readonly OPTIONS=/data/options.json
+readonly APP_USER=renovate
+readonly CA_BUNDLE=/run/renovate/ca-bundle.pem
+
+# option <jq filter>
+# One value of the app configuration, empty when it is not set.
+option() {
+  jq --raw-output "$1 // empty" "$OPTIONS" 2>/dev/null || true
+}
+
+install_extra_packages() {
+  local -a packages=()
+  mapfile -t packages < <(option '.advanced.extra_packages[]? | select(test("^[a-z0-9][a-z0-9+._-]*$"))')
+  if ((${#packages[@]} == 0)); then
+    return 0
+  fi
+  bashio::log.info "Installing extra packages: ${packages[*]}"
+  if ! apk add --no-cache "${packages[@]}" >/dev/null; then
+    bashio::log.warning "Some extra packages could not be installed. Renovate starts without them."
+  fi
+}
+
+# configure_certificates
+# A certificate authority of your own is added to the system bundle for git and to Node.js for Renovate.
+configure_certificates() {
+  local name file
+  name="$(option '.advanced.ca_certificate')"
+  if [[ -n "$name" ]]; then
+    for file in "/ssl/${name}" "/config/${name}"; do
+      if [[ -f "$file" ]]; then
+        mkdir -p "$(dirname "$CA_BUNDLE")"
+        cat /etc/ssl/certs/ca-certificates.crt "$file" >"$CA_BUNDLE"
+        chmod 644 "$CA_BUNDLE"
+        export NODE_EXTRA_CA_CERTS="$file"
+        export SSL_CERT_FILE="$CA_BUNDLE" GIT_SSL_CAINFO="$CA_BUNDLE" REQUESTS_CA_BUNDLE="$CA_BUNDLE"
+        bashio::log.info "Trusting the certificate authority ${name}"
+        break
+      fi
+    done
+    if [[ -z "${NODE_EXTRA_CA_CERTS:-}" ]]; then
+      bashio::log.warning "The certificate file ${name} was not found in /ssl or the app configuration folder."
+    fi
+  fi
+  if [[ "$(option '.advanced.insecure_tls')" == "true" ]]; then
+    bashio::log.warning "Certificate checks are switched off. Provide the CA certificate instead when you can."
+    export NODE_TLS_REJECT_UNAUTHORIZED=0 GIT_SSL_NO_VERIFY=true
+  fi
+}
+
+prepare_data_directory() {
+  mkdir -p /data/home /data/runs /data/cache /data/keys
+  # Files from a restore may belong to someone else. The options stay with the Supervisor.
+  find /data -mindepth 1 -not -name options.json ! -user "$APP_USER" -exec chown "$APP_USER:$APP_USER" {} +
+  mkdir -p /tmp/renovate-work
+  chown "$APP_USER:$APP_USER" /tmp/renovate-work
+}
+
+main() {
+  bashio::log.info "Starting Renovate $(cat /etc/renovate-app/version)"
+  install_extra_packages
+  configure_certificates
+  prepare_data_directory
+
+  export HOME=/data/home
+  export NODE_ENV=production
+  cd /opt/renovate-app || exit 1
+  # The experimental flag only silences the notice about Node.js's built-in SQLite driver.
+  exec s6-setuidgid "$APP_USER" node --disable-warning=ExperimentalWarning /opt/renovate-app/server/main.mjs
+}
+
+main "$@"

@@ -1,0 +1,210 @@
+configuration:
+  general:
+    name: "Appearance"
+    description: "Language, colors and logging."
+    fields:
+      language:
+        name: "Language"
+        description: "Auto follows Home Assistant."
+      theme:
+        name: "Theme"
+        description: "Auto follows Home Assistant, then your system."
+      accent:
+        name: "Accent color"
+        description: "Blue is the default. Home Assistant uses the primary color of your Home Assistant theme."
+      accent_color:
+        name: "Custom accent color"
+        description: "Used when the accent color is set to Custom. Format #RRGGBB."
+      log_level:
+        name: "Log level of the app"
+        description: "How much the app writes to its log. Renovate's own detail level is set under Advanced."
+      timezone:
+        name: "Time zone"
+        description: "Used for the schedule, for example Europe/Berlin. Empty uses the time zone of Home Assistant."
+  schedule:
+    name: "Schedule"
+    description: "When Renovate runs by itself."
+    fields:
+      mode:
+        name: "Automatic runs"
+        description: "Cron uses a schedule, interval repeats after a fixed time, manual never starts by itself."
+      cron:
+        name: "Cron schedule"
+        description: "Five fields: minute hour day month weekday. 0 */6 * * * means every six hours."
+      interval_minutes:
+        name: "Interval (minutes)"
+        description: "Used when automatic runs are set to Interval."
+      run_on_start:
+        name: "Run when the app starts"
+        description: "Start a run a moment after the app started."
+  resources:
+    name: "Resources"
+    description: "How much of this machine a run may use. The automatic profile fits the memory of your system."
+    fields:
+      profile:
+        name: "Resource profile"
+        description: "Light for a Raspberry Pi, Balanced for most systems, Performance for strong machines. Automatic chooses by memory."
+      max_concurrent_runs:
+        name: "Parallel runs"
+        description: "How many connections are processed at the same time. Overrides the profile."
+      memory_limit_mb:
+        name: "Memory per run (MB)"
+        description: "Upper limit for the memory of one Renovate process. Overrides the profile."
+      batch_size:
+        name: "Repositories per batch"
+        description: "Renovate is restarted after this many repositories, which keeps memory low. Overrides the profile."
+      cpu_priority:
+        name: "CPU niceness"
+        description: "0 is normal, 19 is the most considerate. Higher values keep Home Assistant responsive. Overrides the profile."
+      run_timeout_minutes:
+        name: "Time limit per run (minutes)"
+        description: "A run that takes longer is stopped."
+  history:
+    name: "History"
+    description: "How long runs and their logs are kept."
+    fields:
+      keep_runs:
+        name: "Runs to keep"
+        description: "Older runs are removed."
+      keep_log_days:
+        name: "Days to keep logs"
+        description: "Runs older than this are removed with their logs."
+  renovate:
+    name: "Renovate"
+    description: "Defaults for all repositories. A renovate.json in a repository can override most of them."
+    fields:
+      dry_run:
+        name: "Dry run"
+        description: "Off makes real changes. The other modes only look: extract finds dependencies, lookup also checks for updates, full simulates everything."
+      onboarding:
+        name: "Onboarding pull request"
+        description: "Open a \"Configure Renovate\" pull request in repositories without configuration. Off means Renovate needs no configuration, see below."
+      onboarding_preset:
+        name: "Onboarding preset"
+        description: "The preset written into the onboarding pull request."
+      require_config:
+        name: "Configuration file"
+        description: "Required: only repositories with a configuration are processed. Optional: repositories without one are processed with defaults. Ignored: repository files are not read."
+      git_author:
+        name: "Commit author"
+        description: "Name and address of the commits, as Name <address>. Empty uses Renovate's default."
+      default_extends:
+        name: "Default presets"
+        description: "Presets applied to every repository, for example group:allNonMajor."
+      default_labels:
+        name: "Default labels"
+        description: "Labels added to every pull request."
+      pr_concurrent_limit:
+        name: "Open pull requests at once"
+        description: "Maximum per repository. 0 means no limit. Empty uses Renovate's default."
+      pr_hourly_limit:
+        name: "New pull requests per hour"
+        description: "Maximum per repository. 0 means no limit. Empty uses Renovate's default."
+      github_com_token:
+        name: "Token for github.com"
+        description: "Lets Renovate read release notes and changelogs from GitHub without hitting rate limits. A token without any permissions is enough."
+      host_rules:
+        name: "Credentials for registries"
+        description: "Logins for private package sources such as a Docker registry or an npm proxy."
+        fields:
+          match_host:
+            name: "Host or address, e.g. ghcr.io"
+            description: "Host or address, e.g. ghcr.io"
+          username:
+            name: "User name"
+            description: "User name"
+          password:
+            name: "Password"
+            description: "Password"
+          token:
+            name: "Token"
+            description: "Token"
+      config_file:
+        name: "Configuration file in the app folder"
+        description: "A JSON file with Renovate options, placed in the app's configuration folder (addon_configs). Merged over the defaults above."
+  webhooks:
+    name: "Webhooks"
+    description: "Let the git server trigger runs when something happens."
+    fields:
+      enabled:
+        name: "Receive webhooks"
+        description: "Opens a port that git servers can send events to."
+      port:
+        name: "Port"
+        description: "Also enable this port in the network settings of the app."
+      public_url:
+        name: "Public address"
+        description: "The address your git server uses to reach the port, for example https://hooks.example.org. Without it, webhooks cannot be set up automatically."
+      debounce_seconds:
+        name: "Wait before running (seconds)"
+        description: "Events within this time are combined into one run."
+      ignore_own_events:
+        name: "Ignore events caused by Renovate"
+        description: "Prevents Renovate's own pull requests from starting new runs in a loop."
+  home_assistant:
+    name: "Home Assistant"
+    description: "What the app reports to Home Assistant."
+    fields:
+      sensors:
+        name: "Sensors"
+        description: "Creates sensor.renovate_status, sensor.renovate_open_pull_requests and sensor.renovate_last_run."
+      events:
+        name: "Events"
+        description: "Fires the event renovate_run_finished after every run, for automations."
+      failure_notification:
+        name: "Notify on failure"
+        description: "Shows a notification in Home Assistant when a run fails."
+  advanced:
+    name: "Advanced"
+    description: "For special setups: certificates, extra tools, environment variables."
+    fields:
+      renovate_log_level:
+        name: "Renovate log level"
+        description: "Detail level of the run logs. Debug is very verbose."
+      extra_packages:
+        name: "Extra system packages"
+        description: "Alpine packages installed when the app starts, for example python3, py3-pip or go. Needed when Renovate has to run those tools to update lock files."
+      extra_env:
+        name: "Extra environment variables"
+        description: "Passed to every Renovate run, for example proxy or registry settings."
+        fields:
+          name:
+            name: "Name"
+            description: "Name"
+          value:
+            name: "Value"
+            description: "Value"
+      ca_certificate:
+        name: "CA certificate"
+        description: "File name of a certificate authority in /ssl or in the app folder. Needed for servers with a self-made certificate."
+      insecure_tls:
+        name: "Do not verify certificates"
+        description: "Accepts any certificate. Insecure: prefer providing the CA certificate."
+      github_client_id:
+        name: "GitHub OAuth client ID"
+        description: "Use your own GitHub OAuth app (with device flow enabled) for the sign-in with a code."
+  connections:
+    name: "Connections"
+    description: "Git server accounts defined here instead of in the web interface. They are read-only there. Useful to set the app up from configuration alone."
+    fields:
+      name:
+        name: "Name"
+        description: "Name of the connection."
+      provider:
+        name: "Server type"
+        description: "github, gitlab, gitea or forgejo."
+      url:
+        name: "Address"
+        description: "Address of your server, for example https://git.example.org. Empty for github.com and gitlab.com."
+      token:
+        name: "Access token"
+        description: "Token with permission to push branches and open pull requests."
+      repositories:
+        name: "Repositories"
+        description: "Comma separated list such as owner/one, owner/two. Empty processes every repository the account can push to."
+      include:
+        name: "Include patterns"
+        description: "Comma separated patterns such as my-org/*. Only used when no repositories are listed."
+      exclude:
+        name: "Exclude patterns"
+        description: "Comma separated patterns that are never processed."

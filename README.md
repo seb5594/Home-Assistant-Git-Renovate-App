@@ -1,56 +1,143 @@
 <!-- header:begin (generated from project metadata) -->
-<h1 align="center">Example App</h1>
+<h1 align="center">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/seb5594/Home-Assistant-Git-Renovate-App/dev/renovate/dark_logo@2x.png">
+    <img src="https://raw.githubusercontent.com/seb5594/Home-Assistant-Git-Renovate-App/dev/renovate/logo@2x.png" alt="Renovate" width="360" height="90">
+  </picture>
+  <br>
+  Renovate
+</h1>
 
 <p align="center">
-  <img src="https://raw.githubusercontent.com/seb5594/Home-Assistant-App-Template/dev/example-app/logo.png" alt="Example App" width="360" height="90">
-</p>
-
----
-
-<p align="center">
-  <a href="https://paypal.me/seb5594"><img src="https://img.shields.io/static/v1?label=Support&amp;message=PayPal&amp;color=0070BA&amp;logo=paypal&amp;logoColor=white&amp;style=for-the-badge" alt="PayPal" height="40"></a>
-  <a href="https://buymeacoffee.com/seb5594"><img src="https://img.shields.io/static/v1?label=Support&amp;message=Buy%20Me%20a%20Coffee&amp;color=FFDD00&amp;logo=buy-me-a-coffee&amp;logoColor=black&amp;style=for-the-badge" alt="Buy Me a Coffee" height="40"></a><br>
-  <a href="https://my.home-assistant.io/redirect/supervisor_add_addon_repository/?repository_url=https%3A%2F%2Fgithub.com%2Fseb5594%2FHome-Assistant-Apps"><img src="https://img.shields.io/static/v1?label=Home%20Assistant&amp;message=Add%20app%20repository&amp;color=18BCF2&amp;logo=homeassistant&amp;logoColor=white&amp;style=for-the-badge" alt="Home Assistant" height="28"></a>
-  <a href="https://github.com/seb5594/Home-Assistant-App-Template/releases"><img src="https://img.shields.io/static/v1?label=version&amp;message=0.1.0&amp;color=1877A5&amp;style=for-the-badge" alt="version" height="28"></a><br>
-  <img src="https://img.shields.io/static/v1?label=arch&amp;message=amd64%20%C2%B7%20aarch64%20%C2%B7%20armv7%20%C2%B7%20armhf%20%C2%B7%20i386&amp;color=157F71&amp;style=flat" alt="arch" height="20">
-  <img src="https://img.shields.io/static/v1?label=stage&amp;message=stable&amp;color=2F855A&amp;style=flat" alt="stage" height="20">
-  <img src="https://img.shields.io/static/v1?label=mounts%20%28read-only%29&amp;message=config&amp;color=157F71&amp;style=flat" alt="mounts (read-only)" height="20"><br>
-  <a href="https://github.com/seb5594/Home-Assistant-Apps/stargazers"><img src="https://img.shields.io/github/stars/seb5594/Home-Assistant-App-Template?label=stars&amp;style=flat" alt="stars" height="20"></a>
-  <a href="https://github.com/seb5594/Home-Assistant-Apps/issues"><img src="https://img.shields.io/github/issues/seb5594/Home-Assistant-App-Template?label=issues&amp;style=flat" alt="issues" height="20"></a>
-  <a href="https://github.com/seb5594/Home-Assistant-App-Template/actions/workflows/ci.yml"><img src="https://img.shields.io/github/actions/workflow/status/seb5594/Home-Assistant-App-Template/ci.yml?branch=dev&amp;label=checks&amp;style=flat" alt="checks" height="20"></a>
-  <a href="https://github.com/seb5594/Home-Assistant-Apps#license"><img src="https://img.shields.io/github/license/seb5594/Home-Assistant-App-Template?label=license&amp;style=flat" alt="license" height="20"></a>
+  <a href="https://my.home-assistant.io/redirect/supervisor_add_addon_repository/?repository_url=https%3A%2F%2Fgithub.com%2Fseb5594%2FHome-Assistant-Apps"><img src="https://img.shields.io/static/v1?label=Home%20Assistant&amp;message=Add%20app%20repository&amp;color=18BCF2&amp;logo=homeassistant&amp;logoColor=white&amp;style=for-the-badge" alt="Home Assistant" height="28"></a><br>
+  <a href="https://github.com/seb5594/Home-Assistant-Git-Renovate-App/releases"><img src="https://img.shields.io/static/v1?label=app%20version&amp;message=2026.11.20&amp;color=1877A5&amp;style=for-the-badge" alt="app version" height="28"></a><br>
+  <img src="https://img.shields.io/static/v1?label=stage&amp;message=experimental&amp;color=2F855A&amp;style=flat" alt="stage" height="20">
+  <img src="https://img.shields.io/static/v1?label=ingress&amp;message=enabled&amp;color=7C3AED&amp;style=flat" alt="ingress" height="20">
+  <img src="https://img.shields.io/static/v1?label=arch&amp;message=amd64%20%C2%B7%20aarch64&amp;color=157F71&amp;style=flat" alt="arch" height="20">
+  <img src="https://img.shields.io/static/v1?label=mounts%20%28read-only%29&amp;message=addon_config%20%C2%B7%20ssl&amp;color=157F71&amp;style=flat" alt="mounts (read-only)" height="20"><br>
+  <a href="https://github.com/seb5594/Home-Assistant-Apps/stargazers"><img src="https://img.shields.io/github/stars/seb5594/Home-Assistant-Git-Renovate-App?label=stars&amp;style=flat" alt="stars" height="20"></a>
+  <a href="https://github.com/seb5594/Home-Assistant-Apps/forks"><img src="https://img.shields.io/github/forks/seb5594/Home-Assistant-Git-Renovate-App?label=forks&amp;style=flat" alt="forks" height="20"></a>
+  <a href="https://github.com/seb5594/Home-Assistant-Git-Renovate-App/actions/workflows/ci.yml"><img src="https://img.shields.io/github/actions/workflow/status/seb5594/Home-Assistant-Git-Renovate-App/ci.yml?branch=dev&amp;label=checks&amp;style=flat" alt="checks" height="20"></a>
+  <a href="https://github.com/seb5594/Home-Assistant-Apps/issues"><img src="https://img.shields.io/github/issues/seb5594/Home-Assistant-Git-Renovate-App?label=issues&amp;style=flat" alt="issues" height="20"></a><br>
+  <a href="https://paypal.me/seb5594"><img src="https://img.shields.io/static/v1?label=Support&amp;message=PayPal&amp;color=0070BA&amp;logo=paypal&amp;logoColor=white&amp;style=for-the-badge" alt="PayPal" height="24"></a>
+  <a href="https://buymeacoffee.com/seb5594"><img src="https://img.shields.io/static/v1?label=Support%20%F0%9F%8D%BA&amp;message=Buy%20me%20a%20c%CC%B6o%CC%B6f%CC%B6f%CC%B6e%CC%B6e%CC%B6%20Beer&amp;color=FFDD00&amp;style=for-the-badge" alt="Buy me a beer" height="24"></a><br>
+  <a href="https://github.com/seb5594/Home-Assistant-Apps#license"><img src="https://img.shields.io/github/license/seb5594/Home-Assistant-Git-Renovate-App?label=license&amp;style=flat" alt="license" height="20"></a>
 </p>
 <!-- header:end -->
 
 **🇬🇧 English** · [🇩🇪 Deutsch](README.de.md)
 
-A starting point for a Home Assistant app with the shared pipeline already wired in: validation,
-multi-architecture build, runtime tests, GHCR release and README badges.
+> [!WARNING]
+> **Experimental.** This app is new and has been tested against a mocked git server, a stand-in for Renovate and the configuration check of the real Renovate, but not yet on many real installations. Expect rough edges, and please report what you find.
 
-## Using this template
+Dependencies age quietly: a Docker tag here, a GitHub Action there, a Python package in your custom integration. **Renovate** watches your repositories and opens a pull request whenever something you use has a new version, so updates become a review instead of a chore. This app runs Renovate **on your own Home Assistant**, next to your own git server, with a web interface that needs no command line.
 
-1. Create a repository from this template. Name it `Home-Assistant-<project>-App` so the
-   [app catalog](https://github.com/seb5594/Home-Assistant-Apps) picks it up.
-2. Rename `example-app/` and set `slug`, `name`, `url`, `description` and the options in `config.yaml`.
-   The folder name must equal the slug.
-3. Replace the repository URL in the `Dockerfile` label and change the greeting logic in `run.sh`.
-   Every `apk` package is pinned through a build argument with a legacy twin (`ARG JQ_VERSION=` and
-   `ARG JQ_VERSION_LEGACY=`): the twin carries the Alpine 3.22 version used for `armv7`, `armhf` and `i386`.
-   Remove those architectures from `config.yaml` to drop the twins.
-4. Adjust `.github/tests/runtime.sh`; it runs inside the built image.
-5. Regenerate the badge block above and commit the result:
+![Overview](docs/images/overview.png)
 
-   ```bash
-   git clone https://github.com/seb5594/hass-workflows .engine   # private; needs access
-   python .engine/.scripts/readme.py
-   ```
+## Why this app
 
-6. Raise `version` in `config.yaml` and the `BUILD_VERSION` default in the `Dockerfile` together
-   with a new `CHANGELOG.md` entry for every release.
+- **Connecting takes a minute.** Pick your server and sign in the easiest way it allows: a short code for GitHub, your login for Gitea and Forgejo (the app creates a token with exactly the right permissions, your password is never stored), or a pre-filled token page for GitLab. The Gitea app of Home Assistant is found automatically.
+- **GitHub, GitLab, Gitea and Forgejo** in one app, any number of accounts side by side. Self-hosted servers, GitHub Enterprise and Codeberg work too.
+- **Safe to start.** A *preview run* shows what Renovate would do without changing anything. Repositories are switched on one by one, and Renovate's own "Configure Renovate" pull request has to be merged before it touches a repository.
+- **Made for small machines.** One Node.js process that sleeps between runs, SQLite instead of a database server, runs in small batches with a memory limit and low CPU priority. A resource profile is chosen automatically from your memory, so a Raspberry Pi is as welcome as a mini PC.
+- **Always the newest Renovate, pinned exactly.** The Renovate version is fixed in the image. A new Renovate release raises the pin and publishes a new app version by itself, so you get fresh versions without ever running an unpinned image.
+- **Event driven when you want it.** Webhooks from your git server start a run a minute after you merge a pull request or tick a box in the Dependency Dashboard, instead of waiting for the schedule.
+- **Part of Home Assistant.** Sensors (`sensor.renovate_status`, `sensor.renovate_open_pull_requests`, `sensor.renovate_last_run`), an event after every run and optional failure notifications fit into your automations.
+- **Looks like it belongs.** Light and dark mode follow Home Assistant, the accent color is blue, follows your Home Assistant theme or is a color of your choice, and the interface speaks English and German.
+- **Transparent.** Every run has a live log, a result per repository (new pull requests, updates found, problems) and plain-language hints for the usual failures: expired token, unreachable server, certificate, rate limit, too little memory.
+- **Configurable down to the details.** Every setting is in the web interface *and* in the app configuration; a lock shows which one wins. Connections can be defined in the configuration alone.
 
-The only workflow, `.github/workflows/ci.yml`, calls the shared engine at a pinned commit and
-needs the `ORCHESTRATION_PAT` secret. Pin base images and every `apk` package to an exact
-version; the pipeline rejects anything floating.
+| | | |
+| --- | --- | --- |
+| ![Setup assistant](docs/images/wizard.png) | ![Run details](docs/images/run-detail.png) | ![Repositories, dark mode, German](docs/images/repositories-dark-de.png) |
+
+## Supported git servers
+
+| Server | Sign-in | Notes |
+| --- | --- | --- |
+| GitHub, GitHub Enterprise Server | Code (device flow) or token | The code sign-in needs an OAuth app, see [setting up the code sign-in](renovate/DOCS.md#sign-in-with-a-code-github) |
+| GitLab, self-managed GitLab | Token (pre-filled page) | GitLab's device tokens expire after two hours, so personal access tokens are used |
+| Gitea | Password (creates a token) or token | The Home Assistant Gitea app is detected |
+| Forgejo, Codeberg | Password (creates a token) or token | |
+
+Other servers that Renovate supports (Bitbucket, Azure DevOps, ...) can be added as one file in `server/providers/`; see [Contributing](#contributing).
+
+## Quick start
+
+1. Add this repository to Home Assistant: **Settings → Apps → App store → ⋮ → Repositories**, then paste `https://github.com/seb5594/Home-Assistant-Apps`.
+2. Install **Renovate**, start it and open the web interface (it also appears in the sidebar).
+3. Press **Connect a git server** and follow the four steps.
+4. Start with a **preview run**. When the result looks right, press **Run now**.
+5. Open the "Configure Renovate" pull requests in your repositories and merge them. From then on Renovate keeps the repositories current.
+
+The first run in a repository without configuration only opens the onboarding pull request. Nothing else changes before you merge it.
+
+## How it relates to Mend Renovate CE
+
+Mend publishes a "Community Edition" server of Renovate. This app deliberately does **not** wrap it, for reasons that matter to you:
+
+| | Mend Renovate CE | This app (open-source Renovate) |
+| --- | --- | --- |
+| Git servers | GitHub, GitLab, Bitbucket Server | GitHub, GitLab, **Gitea, Forgejo**; Bitbucket and others possible |
+| License | Proprietary, Mend terms of service, license key required | Renovate is AGPL-3.0, this app is MIT, no key |
+| Redistribution | The image must not be bundled into other images | Bundled unmodified with the AGPL notices |
+| Runs on | Debian based image | Alpine, tuned for Home Assistant |
+
+The part that makes CE a "server" (schedule, job queue, webhooks, status) is what this app adds around the open-source Renovate, so you do not need two products. If you rely on Mend-only features (Merge Confidence, Mend Remediate), use Mend's own image.
+
+## Performance and resources
+
+| Profile | Chosen for | Parallel runs | Memory per run | Repositories per batch | CPU priority |
+| --- | --- | --- | --- | --- | --- |
+| Light | up to 2 GB RAM, Raspberry Pi | 1 | 512 MB | 3 | 15 (very polite) |
+| Balanced | 2 to 6 GB | 1 | 1 GB | 10 | 10 |
+| Performance | more than 6 GB | 2 | 2 GB | 25 | 5 |
+
+- Between runs the app is a single idle Node.js process, roughly 80 MB. There is no polling: one timer waits for the next run.
+- Renovate runs only while a run is active, in batches, so memory is given back after each batch. Every value can be overridden.
+- The web interface has no framework and no build step: a few small files, compressed once and cached by the browser. Pages refresh only while visible, and only a running run keeps a live connection.
+- The image is a few hundred MB, because Renovate itself is large even after development files are removed (about 185 MB of the installed package).
+
+## Honest limits
+
+- **Experimental.** See the notice at the top.
+- **amd64 and aarch64 only.** Renovate needs Node.js 24, which older Alpine releases for 32-bit systems do not offer. Home Assistant has retired 32-bit systems anyway.
+- **Pull requests come from the account you connect.** Use a dedicated "renovate" account for a clean history. A GitHub App or GitLab bot token can be pasted as a token as well.
+- **GitLab has no code sign-in** (see above). A token page that is filled in for you is the shortcut.
+- **Lock files of non-JavaScript projects** need their tools. The image ships Node.js, npm and Git; add `python3`, `py3-pip`, `go` and others under *Extra system packages* when your repositories need them. Docker-in-Docker (`binarySource: docker`) is not available.
+- **Regular expression safety net removed.** Renovate's optional `re2` engine is not part of the image, so Renovate uses the built-in engine. This only matters if you let untrusted people change the Renovate configuration of your repositories.
+- **Webhooks need a reachable address.** Without a public URL (reverse proxy, tunnel) the schedule does the work, which is perfectly fine for most homes.
+- **Sensors are not registry entities.** They disappear when Home Assistant restarts until the next update of the app, which happens within seconds of its start.
+- **One user.** Access is controlled by Home Assistant (by default administrators only). There are no separate accounts in the app.
+
+## Updates and versions
+
+Versions are calendar based: `YYYY.MM.DD` for the first build of a day, then `.1`, `.2`, and so on. The pinned Renovate version and the Alpine packages are updated automatically by the release pipeline; the [changelog](renovate/CHANGELOG.md) says what changed. Pre-built images are published to the GitHub container registry for both architectures.
+
+## Documentation
+
+The [app documentation](renovate/DOCS.md) lists every option and explains the sign-in methods, webhooks, certificates, extra tools and troubleshooting.
+
+## Contributing
+
+The code is small on purpose and written to be read:
+
+```text
+renovate/rootfs/opt/renovate-app/
+  server/providers/     one file per git server
+  server/runs/          queue, runner, resource profiles, report parsing
+  server/settings/      the registry that drives validation, the interface and the configuration
+  ui/                   the web interface (plain JavaScript modules, no build step)
+tools/                  dev server with a fake Gitea, config and picture generators
+.github/tests/unit/     tests (node --test), also run inside the built image
+```
+
+```bash
+node --disable-warning=ExperimentalWarning --test '.github/tests/unit/*.test.mjs'
+node --disable-warning=ExperimentalWarning tools/dev-server.mjs
+```
+
+`tools/sync-config.mjs` regenerates `config.yaml` and the translations from the settings registry; a test fails when they differ. New settings, texts and providers are described in the headers of the files they belong to.
 
 <!-- support:begin (generated, shared text) -->
 ## Say thanks
@@ -59,13 +146,13 @@ All my projects are built in my spare time, just for the fun of it. Still, they 
 
 If my work helped you or turned out to be useful, show your appreciation with a hot drink for my next sleepless night.
 
-[![PayPal](https://img.shields.io/static/v1?label=Support&message=PayPal&color=0070BA&logo=paypal&logoColor=white&style=for-the-badge)](https://paypal.me/seb5594) [![Buy Me a Coffee](https://img.shields.io/static/v1?label=Support&message=Buy%20Me%20a%20Coffee&color=FFDD00&logo=buy-me-a-coffee&logoColor=black&style=for-the-badge)](https://buymeacoffee.com/seb5594)
+[![PayPal](https://img.shields.io/static/v1?label=Support&message=PayPal&color=0070BA&logo=paypal&logoColor=white&style=for-the-badge)](https://paypal.me/seb5594) [![Buy me a beer](https://img.shields.io/static/v1?label=Support%20%F0%9F%8D%BA&message=Buy%20me%20a%20c%CC%B6o%CC%B6f%CC%B6f%CC%B6e%CC%B6e%CC%B6%20Beer&color=FFDD00&style=for-the-badge)](https://buymeacoffee.com/seb5594)
 <!-- support:end -->
 
 <!-- license:begin (generated from the license file) -->
 ## License
 
-[![license](https://img.shields.io/static/v1?label=license&message=Apache-2.0&color=5B6770&style=flat)](LICENSE)
+[![license](https://img.shields.io/static/v1?label=license&message=MIT&color=5B6770&style=flat)](LICENSE)
 
-Published under the [Apache License 2.0](LICENSE).
+Published under the [MIT License](LICENSE).
 <!-- license:end -->
