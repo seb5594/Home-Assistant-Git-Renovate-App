@@ -11,7 +11,8 @@ export const paths = Object.freeze({
   migrations: path.join(appRoot, 'db'),
   data,
   options: process.env.OPTIONS_FILE ?? path.join(data, 'options.json'),
-  database: path.join(data, 'renovate-app.db'),
+  // In a folder of its own: SQLite creates journal files next to the database, so the folder must be writable.
+  database: path.join(data, 'db', 'renovate-app.db'),
   keyFile: path.join(data, 'keys', 'secret.key'),
   runs: path.join(data, 'runs'),
   // Package lookups are worth keeping between runs; the clones are not.

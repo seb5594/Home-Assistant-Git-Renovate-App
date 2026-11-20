@@ -58,11 +58,12 @@ COPY licenses/ /usr/share/licenses/renovate-app/
 COPY LICENSE THIRD_PARTY_NOTICES.md /usr/share/licenses/renovate-app/
 
 # Git does not keep the executable bit when files are uploaded through the GitHub API.
-RUN find /etc/s6-overlay/s6-rc.d -type f \( -name run -o -name finish \) -exec chmod a+x {} +
+RUN find /etc/s6-overlay/s6-rc.d -type f \( -name run -o -name finish \) -exec chmod a+x {} + \
+    && chmod a+x /usr/lib/renovate-app/prepare-data.sh
 
 ENV NODE_ENV=production
 
-ARG BUILD_VERSION=2026.11.20
+ARG BUILD_VERSION=2026.11.20.1
 ARG BUILD_ARCH=amd64
 RUN mkdir -p /etc/renovate-app && echo "${BUILD_VERSION}" >/etc/renovate-app/version
 LABEL io.hass.version="${BUILD_VERSION}" \
