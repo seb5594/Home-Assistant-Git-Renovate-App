@@ -1,6 +1,6 @@
 // Connections: the list, and the detail page with repositories, settings and webhooks.
 import { api } from '../api.mjs';
-import { avatar, badge, busy, confirmDialog, emptyState, notice, reportError, skeleton, switchControl, toast } from '../components.mjs';
+import { avatar, badge, busy, configurationNotice, confirmDialog, emptyState, notice, reportError, skeleton, switchControl, toast } from '../components.mjs';
 import { h, mount } from '../dom.mjs';
 import { dateTime, relativeTime } from '../format.mjs';
 import { iconCopy, iconPlay, iconPlus, iconRefresh } from '../icons.mjs';
@@ -9,15 +9,16 @@ import { providerName } from '../status.mjs';
 
 export async function connectionsList(container, { navigate }) {
   mount(container, skeleton(2));
-  const connections = await api.get('connections');
+  const [connections, status] = await Promise.all([api.get('connections'), api.get('status')]);
   mount(container,
+    configurationNotice(status.configuration),
     h('div', { class: 'page-head' },
       h('div', {}, h('h1', {}, t('connections.title')), h('p', {}, t('connections.subtitle'))),
       h('button', { class: 'btn primary', type: 'button', onclick: () => navigate('/connect') }, iconPlus(), t('connections.add'))),
     connections.length
-      ? h('div', { class: 'grid' }, connections.map((connection) => h('a', { class: 'card stack', href: `#/connections/${connection.id}` },
-        h('div', { class: 'row' }, avatar(connection), h('div', { class: 'grow' }, h('strong', {}, connection.name), h('div', { class: 'muted small' }, `${providerName(connection.provider)} · ${connection.accountLogin ?? ''}`)),
-          connection.managed ? badge(t('connections.managed'), 'accent') : null, connection.enabled ? null : badge(t('connections.off'), 'warn')),
+      ? h('div', { class: 'grid' }, connections.map((connection) => h('a', { class: 'card card-link stack', href: `#/connections/${connection.id}` },
+        h('div', { class: 'row nowrap' }, avatar(connection), h('div', { class: 'grow' }, h('strong', {}, connection.name), h('div', { class: 'muted small' }, `${providerName(connection.provider)} · ${connection.accountLogin ?? ''}`))),
+        connection.managed || !connection.enabled ? h('div', { class: 'row' }, connection.managed ? badge(t('connections.managed'), 'accent') : null, connection.enabled ? null : badge(t('connections.off'), 'warn')) : null,
         h('div', { class: 'muted' }, t('connections.repository_summary', { enabled: connection.enabledRepositoryCount, total: connection.repositoryCount })),
         connection.lastSyncError ? badge(t('connections.sync_failed'), 'danger') : null)))
       : emptyState(t('connections.empty.title'), t('connections.empty.text'), h('button', { class: 'btn primary', type: 'button', onclick: () => navigate('/connect') }, iconPlus(), t('connections.add'))));

@@ -7,6 +7,7 @@
 //   3. the default below, or a value derived from the resource profile
 //
 // type     enum | bool | int | string | secret | list | records
+// restart  true when the value is only read at start (the start script installs packages and certificates)
 // scope    live          takes effect immediately
 //          next-run      is read when the next Renovate run starts
 //          restart       needs a restart of the app
@@ -94,7 +95,7 @@ export const DEFINITIONS = [
 
   // --- advanced --------------------------------------------------------------------------------
   { key: 'advanced.renovate_log_level', type: 'enum', values: ['debug', 'info', 'warn', 'error'], default: 'info', scope: 'next-run', advanced: true },
-  { key: 'advanced.extra_packages', type: 'list', default: [], itemPattern: /^[a-z0-9][a-z0-9+._-]*$/, scope: 'options-only', advanced: true },
+  { key: 'advanced.extra_packages', type: 'list', default: [], itemPattern: /^[a-z0-9][a-z0-9+._-]*$/, scope: 'options-only', advanced: true, restart: true },
   {
     key: 'advanced.extra_env',
     type: 'records',
@@ -106,8 +107,8 @@ export const DEFINITIONS = [
     scope: 'next-run',
     advanced: true,
   },
-  { key: 'advanced.ca_certificate', type: 'string', pattern: /^[A-Za-z0-9._-][A-Za-z0-9._/-]*$/, patternHint: 'my-ca.pem', scope: 'options-only', advanced: true },
-  { key: 'advanced.insecure_tls', type: 'bool', default: false, scope: 'options-only', advanced: true },
+  { key: 'advanced.ca_certificate', type: 'string', pattern: /^[A-Za-z0-9._-][A-Za-z0-9._/-]*$/, patternHint: 'my-ca.pem', scope: 'options-only', advanced: true, restart: true },
+  { key: 'advanced.insecure_tls', type: 'bool', default: false, scope: 'options-only', advanced: true, restart: true },
   { key: 'advanced.github_client_id', type: 'string', pattern: /^[A-Za-z0-9._-]+$/, scope: 'options-only', advanced: true },
 ];
 

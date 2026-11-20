@@ -5,7 +5,9 @@ import { nowIso } from '../db/database.mjs';
 import { getProvider } from '../providers/index.mjs';
 import { log } from '../util/log.mjs';
 
+/** @returns {Promise<Array<{name:string, ok:boolean, message?:string}>>} one entry per connection of the app configuration */
 export async function reconcileManagedConnections({ db, vault, connections, specs }) {
+  const results = [];
   const wanted = new Map(specs.map((spec) => [spec.name, spec]));
 
   for (const row of db.prepare('SELECT id, name FROM connections WHERE managed = 1').all()) {
@@ -19,7 +21,9 @@ export async function reconcileManagedConnections({ db, vault, connections, spec
     try {
       const existing = connections.findByName(spec.name);
       if (existing && !existing.managed) {
-        log.warn(`The connection "${spec.name}" from the app configuration is skipped: a connection with that name was created in the interface`);
+        const message = 'A connection with this name was created in the web interface. Rename one of them.';
+        log.warn(`The connection "${spec.name}" from the app configuration is skipped: ${message}`);
+        results.push({ name: spec.name, ok: false, message });
         continue;
       }
       let id = existing?.id;
@@ -45,21 +49,27 @@ export async function reconcileManagedConnections({ db, vault, connections, spec
         connections.setBulkOverride(id, spec.repositories, 1);
       }
       log.info(`Connection "${spec.name}" is ready (${connections.enabledRepositoryNames(id).length} repositories switched on)`);
+      results.push({ name: spec.name, ok: true });
     } catch (error) {
       log.error(`The connection "${spec.name}" from the app configuration cannot be set up`, error);
+      results.push({ name: spec.name, ok: false, message: error.message });
     }
   }
+  return results;
 }
 
 /** A list written as comma or line separated text in the app configuration (or already a list). */
 const toList = (value) => (Array.isArray(value) ? value : String(value ?? '').split(/[\n,]/)).map((item) => String(item).trim()).filter(Boolean);
 
-/** Turns the `connections` list of options.json into specs; entries that cannot work are reported and dropped. */
+/** Turns the `connections` list of options.json into specs; entries that cannot work are reported as problems. */
 export function specsFromOptions(options) {
   const specs = [];
-  for (const entry of options?.connections ?? []) {
+  const problems = [];
+  for (const [index, entry] of (options?.connections ?? []).entries()) {
     if (!entry?.name || !entry?.provider || !entry?.token) {
-      log.warn('A connection in the app configuration needs a name, a type and a token and is skipped');
+      const message = 'A connection needs a name, a server type and a token.';
+      log.warn(`Connection ${index + 1} in the app configuration is skipped: ${message}`);
+      problems.push({ name: entry?.name ?? `#${index + 1}`, message });
       continue;
     }
     specs.push({
@@ -72,5 +82,5 @@ export function specsFromOptions(options) {
       exclude: toList(entry.exclude),
     });
   }
-  return specs;
+  return { specs, problems };
 }

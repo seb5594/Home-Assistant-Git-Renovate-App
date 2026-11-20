@@ -56,6 +56,15 @@ export function notice(tone, ...content) {
     (NOTICE_ICONS[tone] ?? iconInfo)(), h('div', { class: 'stack' }, ...content));
 }
 
+/** The warning shown when entries of the app configuration could not be applied; null when all is well. */
+export function configurationNotice(configuration) {
+  if (!configuration?.problems?.length) return null;
+  return notice('warn',
+    h('strong', {}, t('config.problems_title')),
+    h('div', {}, t('config.problems_text')),
+    h('ul', {}, configuration.problems.map((problem) => h('li', {}, h('strong', {}, problem.name), `: ${problem.message}`))));
+}
+
 export function avatar(connection) {
   const initial = (connection.accountName || connection.accountLogin || connection.name || '?').slice(0, 1).toUpperCase();
   return h('span', { class: 'avatar', aria: { hidden: true } },

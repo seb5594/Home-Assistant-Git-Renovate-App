@@ -1,10 +1,11 @@
 // Wires the application together. Nothing is global: every part receives what it needs, which is what lets
 // the tests run the complete app with a fake git server and a fake Renovate.
 import { EventEmitter } from 'node:events';
-import { readFileSync } from 'node:fs';
+import path from 'node:path';
+import { readFileSync, watch } from 'node:fs';
 import http from 'node:http';
 import os from 'node:os';
-import { openDatabase } from './db/database.mjs';
+import { nowIso, openDatabase } from './db/database.mjs';
 import { reconcileManagedConnections, specsFromOptions } from './domain/managed.mjs';
 import { createConnections } from './domain/connections.mjs';
 import { createPendingStore } from './domain/pending.mjs';
@@ -19,6 +20,7 @@ import { detectMachine, resolveResources } from './runs/resources.mjs';
 import { createRunner } from './runs/runner.mjs';
 import { createScheduler } from './scheduling/scheduler.mjs';
 import { createVault, loadOrCreateKey } from './security/crypto.mjs';
+import { DEFINITIONS } from './settings/registry.mjs';
 import { createSettings } from './settings/store.mjs';
 import { log, setLogLevel } from './util/log.mjs';
 import { createWebhookIntake } from './webhooks/intake.mjs';
@@ -34,13 +36,18 @@ function readText(file, fallback) {
   }
 }
 
+/** The app configuration as Home Assistant wrote it, or null when there is none (local runs, tests). */
 function readOptions(file) {
   try {
     return JSON.parse(readFileSync(file, 'utf8'));
   } catch {
-    return {};
+    return null;
   }
 }
+
+const OPTIONS_SETTLE_MS = 1000;
+// Settings that the start script reads before the server runs: a change needs a restart.
+const RESTART_KEYS = DEFINITIONS.filter((definition) => definition.restart).map((definition) => definition.key);
 
 /**
  * @param {object} config
@@ -50,11 +57,20 @@ function readOptions(file) {
  * @param {number} [config.port] port of the web interface
  * @param {string[]|null} [config.allowedAddresses] null disables the source check
  */
-export async function createApp({ paths, options = readOptions(paths.options), databaseFile = paths.database, port = 8099, allowedAddresses = INGRESS_ADDRESSES, fetch: fetcher = fetch, ha = createHomeAssistant({ fetch: fetcher }), processEnv = process.env, versionFile = '/etc/renovate-app/version' }) {
+export async function createApp({ paths, options = readOptions(paths.options) ?? {}, databaseFile = paths.database, port = 8099, allowedAddresses = INGRESS_ADDRESSES, fetch: fetcher = fetch, ha = createHomeAssistant({ fetch: fetcher }), processEnv = process.env, versionFile = '/etc/renovate-app/version' }) {
   const db = openDatabase(databaseFile, paths.migrations);
   const vault = createVault(loadOrCreateKey(paths.keyFile));
   const settings = createSettings({ db, vault, options });
   setLogLevel(settings.get('general.log_level'));
+
+  // The state of the app configuration as the interface shows it: what could not be applied, and whether
+  // a restart is needed. Home Assistant rewrites options.json when the configuration is saved; the app follows.
+  let currentOptions = options;
+  const configuration = { problems: [], restartRequired: false, syncedAt: null };
+  const restartSnapshot = () => JSON.stringify(RESTART_KEYS.map((key) => settings.get(key)));
+  const startupSnapshot = restartSnapshot();
+  let optionsWatcher = null;
+  let settleTimer = null;
 
   const machine = detectMachine(os);
   const getResources = () => resolveResources(settings.values(), machine);
@@ -93,8 +109,28 @@ export async function createApp({ paths, options = readOptions(paths.options), d
   const intake = createWebhookIntake({ connections, queue, settings });
   const webhookServer = createWebhookServer({ intake, settings });
 
+  async function applyConfiguration() {
+    const { specs, problems } = specsFromOptions(currentOptions);
+    const results = await reconcileManagedConnections({ db, vault, connections, specs });
+    configuration.problems = [...problems, ...results.filter((result) => !result.ok).map(({ name, message }) => ({ name, message }))];
+    configuration.restartRequired = restartSnapshot() !== startupSnapshot;
+    configuration.syncedAt = nowIso();
+    publisher.refresh();
+  }
+
+  /** Reads options.json again. @returns {Promise<{changed:boolean}>} */
+  async function reloadConfiguration() {
+    const next = readOptions(paths.options);
+    if (next === null || JSON.stringify(next) === JSON.stringify(currentOptions)) return { changed: false };
+    currentOptions = next;
+    settings.reloadOptions(next);
+    log.info('The app configuration changed and is applied');
+    await applyConfiguration();
+    return { changed: true };
+  }
+
   const router = createRouter();
-  const app = { settings, connections, queue, logStore, logBus, scheduler, credentials: createPendingStore(), flows: createPendingStore({ ttlMs: 20 * 60_000 }), paths, info, ha, publisher, webhookServer, getResources, machine, fetch: fetcher };
+  const app = { configuration, reloadConfiguration, settings, connections, queue, logStore, logBus, scheduler, credentials: createPendingStore(), flows: createPendingStore({ ttlMs: 20 * 60_000 }), paths, info, ha, publisher, webhookServer, getResources, machine, fetch: fetcher };
   registerApi(router, app);
   const serveStatic = createStaticServer(paths.ui);
   const server = http.createServer(createRequestHandler({ router, serveStatic, allowedAddresses }));
@@ -108,6 +144,20 @@ export async function createApp({ paths, options = readOptions(paths.options), d
     if (keys.some((key) => key.startsWith('home_assistant.'))) publisher.refresh();
   });
 
+  function watchOptions() {
+    // The folder is watched, not the file: the Supervisor may replace the file instead of writing into it.
+    try {
+      optionsWatcher = watch(path.dirname(paths.options), (_event, name) => {
+        if (name !== path.basename(paths.options)) return;
+        clearTimeout(settleTimer);
+        settleTimer = setTimeout(() => reloadConfiguration().catch((error) => log.error('The new app configuration could not be applied', error)), OPTIONS_SETTLE_MS);
+      });
+      optionsWatcher.on('error', () => {});
+    } catch (error) {
+      log.warn('Changes of the app configuration are only picked up at the next start', error);
+    }
+  }
+
   let maintenanceTimer = null;
   const maintain = () => queue.prune({ keepRuns: settings.get('history.keep_runs'), keepDays: settings.get('history.keep_log_days') });
 
@@ -117,7 +167,8 @@ export async function createApp({ paths, options = readOptions(paths.options), d
     server,
     intake,
     async start() {
-      await reconcileManagedConnections({ db, vault, connections, specs: specsFromOptions(options) });
+      await applyConfiguration();
+      watchOptions();
       queue.recover();
       maintain();
       maintenanceTimer = setInterval(maintain, MAINTENANCE_INTERVAL_MS);
@@ -135,6 +186,8 @@ export async function createApp({ paths, options = readOptions(paths.options), d
     },
     async stop() {
       clearInterval(maintenanceTimer);
+      clearTimeout(settleTimer);
+      optionsWatcher?.close();
       scheduler.stop();
       publisher.stop();
       intake.cancelPending();

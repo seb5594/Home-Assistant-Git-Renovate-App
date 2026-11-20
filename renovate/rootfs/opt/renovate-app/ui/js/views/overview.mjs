@@ -1,6 +1,6 @@
 // The start page: is everything fine, when does it run next, what is open, and a clear first step if nothing is set up.
 import { api } from '../api.mjs';
-import { avatar, badge, busy, reportError, skeleton, toast } from '../components.mjs';
+import { avatar, badge, busy, configurationNotice, reportError, skeleton, toast } from '../components.mjs';
 import { h, mount } from '../dom.mjs';
 import { duration, number, relativeTime } from '../format.mjs';
 import { iconEye, iconPlay, iconPlus } from '../icons.mjs';
@@ -81,7 +81,7 @@ export async function overview(container, { navigate, refreshChip }) {
   async function render() {
     const [connections, status, runs] = await Promise.all([api.get('connections'), api.get('status'), api.get('runs?limit=10')]);
     if (!connections.length) {
-      mount(container, emptyOverview(navigate));
+      mount(container, configurationNotice(status.configuration), emptyOverview(navigate));
       return;
     }
     const active = status.running.length > 0 || status.queued > 0;
@@ -89,6 +89,7 @@ export async function overview(container, { navigate, refreshChip }) {
     const openPrs = connections.reduce((sum, connection) => sum + (connection.openPrs ?? 0), 0);
     const last = runs.find((run) => !isActive(run));
     mount(container,
+      configurationNotice(status.configuration),
       h('div', { class: 'page-head' },
         h('div', {}, h('h1', {}, t('overview.title')), h('p', {}, statusLine(status))),
         h('div', { class: 'row' }, ...runNow(async () => { await render(); await refreshChip(); }))),

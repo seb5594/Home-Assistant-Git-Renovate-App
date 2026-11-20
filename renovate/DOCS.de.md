@@ -93,13 +93,15 @@ Die Sensoren werden über die Core-API erzeugt und haben keine eindeutige ID. Si
 
 ## Ressourcen
 
-Das Profil *Automatisch* wählt **Sparsam** unter 2 GB Arbeitsspeicher, **Ausgewogen** bis 6 GB und **Leistung** darüber. Sparsam bearbeitet jeweils drei Repositories mit 512 MB und sehr niedriger CPU-Priorität; die anderen Profile geben Renovate mehr Raum. Einzelne Werte überschreibst du unter *Ressourcen → Erweitert*. Die Einstellungsseite zeigt, was für dein Gerät gilt.
+Das Profil *Automatisch* schaut auf den Arbeitsspeicher des Geräts, auf dem Home Assistant läuft, nicht auf das, was die App nutzen darf: **Sparsam** unter 2 GB, **Ausgewogen** bis 6 GB und **Leistung** darüber. Auf einem Mini-PC oder Server mit viel Speicher bedeutet *Automatisch* deshalb *Leistung*; wähle *Sparsam* von Hand, wenn das Gerät für anderes frei bleiben soll. Sparsam bearbeitet jeweils drei Repositories mit 512 MB und sehr niedriger CPU-Priorität; die anderen Profile geben Renovate mehr Raum. Einzelne Werte überschreibst du unter *Ressourcen → Erweitert*. Die Einstellungsseite zeigt, was für dein Gerät gilt.
 
 Endet ein Lauf mit *Renovate ist der Arbeitsspeicher ausgegangen*, wähle das Profil Sparsam oder erhöhe den Speicher pro Lauf.
 
 ## Konfiguration
 
 Alles lässt sich in der Weboberfläche einstellen. Werte in der **App-Konfiguration** (Einstellungen → Apps → Renovate → Konfiguration) gewinnen und zeigen in der Oberfläche ein Schloss. Nutze die Konfiguration, wenn du dein Setup an einer Stelle beschreiben willst, und die Oberfläche für alles andere.
+
+**Änderungen in der Konfiguration gelten innerhalb von Sekunden, ohne Neustart.** Home Assistant schreibt die gespeicherte Konfiguration in die App, die das bemerkt, die neuen Werte übernimmt und ihre Verbindungen aktualisiert. Nur *Zusätzliche Systempakete* und *CA-Zertifikat* werden beim Start der App gelesen; die Oberfläche zeigt dann **Neustart nötig**. Lässt sich ein Eintrag nicht übernehmen (abgelehntes Token, fehlendes Feld), nennen die Seiten Übersicht und Verbindungen, welcher und warum, und **Einstellungen → App-Konfiguration → Jetzt abgleichen** prüft jederzeit erneut.
 
 ### Verbindungen in der Konfiguration
 

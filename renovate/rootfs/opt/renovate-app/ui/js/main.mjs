@@ -59,9 +59,12 @@ async function refreshChip() {
   if (!chip) return;
   const status = await api.get('status');
   const running = status.running.length;
-  mount(chip, running
+  const state = running
     ? badge(t('chip.running', { count: running }), 'accent', { running: true })
-    : status.queued ? badge(t('chip.queued', { count: status.queued }), '') : badge(t('chip.idle'), 'ok'));
+    : status.queued ? badge(t('chip.queued', { count: status.queued }), '') : badge(t('chip.idle'), 'ok');
+  const restart = status.configuration?.restartRequired ? badge(t('chip.restart'), 'warn') : null;
+  restart?.setAttribute('title', t('chip.restart_hint'));
+  mount(chip, h('span', { class: 'row' }, restart, state));
 }
 
 async function route() {

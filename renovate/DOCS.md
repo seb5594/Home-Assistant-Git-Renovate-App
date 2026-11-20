@@ -106,13 +106,15 @@ The sensors are created through the Core API and do not have a unique ID. They d
 
 ## Resources
 
-The profile *Automatic* picks **Light** below 2 GB of memory, **Balanced** up to 6 GB and **Performance** above. Light runs one batch of three repositories at a time with 512 MB and a very low CPU priority; the other profiles give Renovate more room. Override single values under *Resources → Advanced*. The Settings page shows what is in effect for your machine.
+The profile *Automatic* looks at the memory of the machine Home Assistant runs on, not at what the app may use: **Light** below 2 GB, **Balanced** up to 6 GB and **Performance** above. On a mini PC or server with plenty of memory, *Automatic* therefore means *Performance*; choose *Light* by hand if the machine should stay free for other things. Light runs one batch of three repositories at a time with 512 MB and a very low CPU priority; the other profiles give Renovate more room. Override single values under *Resources → Advanced*. The Settings page shows what is in effect for your machine.
 
 If a run ends with *Renovate ran out of memory*, choose the Light profile or raise the memory per run.
 
 ## Configuration
 
 Everything can be set in the web interface. Values written in the **app configuration** (Settings → Apps → Renovate → Configuration) win and show a lock in the interface. Use the configuration when you want your setup described in one place, and the interface for everything else.
+
+**Changes in the configuration apply within seconds, without a restart.** Home Assistant writes the saved configuration to the app, which notices it, applies the new values and updates its connections. Only *Extra system packages* and *CA certificate* are read when the app starts; the interface then shows **Restart needed**. If an entry cannot be applied (a rejected token, a missing field), the Overview and Connections pages say which one and why, and **Settings → App configuration → Compare now** checks again at any time.
 
 ### Connections in the configuration
 

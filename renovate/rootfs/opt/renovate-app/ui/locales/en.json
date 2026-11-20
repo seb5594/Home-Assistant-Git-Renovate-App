@@ -484,5 +484,15 @@
   "error.forbidden_source": "This interface is only reachable through Home Assistant.",
   "error.not_found": "Not found.",
   "error.internal_error": "Something went wrong. See the app log for details.",
-  "wizard.warning.missing_profile": "The account has no full name or email address in its profile. Renovate uses them for its commits, so add them in your server's account settings."
+  "wizard.warning.missing_profile": "The account has no full name or email address in its profile. Renovate uses them for its commits, so add them in your server's account settings.",
+  "config.problems_title": "The app configuration has problems",
+  "config.problems_text": "These entries could not be applied. Fix them in the app configuration; it is picked up within seconds.",
+  "chip.restart": "Restart needed",
+  "chip.restart_hint": "The app configuration changed extra packages or certificates. They are only applied when the app starts.",
+  "settings.config.title": "App configuration",
+  "settings.config.text": "Changes saved in the app configuration are picked up within seconds, without a restart. Only extra system packages and certificates need a restart of the app.",
+  "settings.config.synced": "Last compared {when}",
+  "settings.config.reload": "Compare now",
+  "settings.config.reloaded": "The app configuration was applied",
+  "settings.config.unchanged": "The app configuration is already up to date"
 }
