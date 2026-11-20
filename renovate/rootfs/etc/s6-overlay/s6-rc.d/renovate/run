@@ -55,19 +55,11 @@ configure_certificates() {
   fi
 }
 
-prepare_data_directory() {
-  mkdir -p /data/home /data/runs /data/cache /data/keys
-  # Files from a restore may belong to someone else. The options stay with the Supervisor.
-  find /data -mindepth 1 -not -name options.json ! -user "$APP_USER" -exec chown "$APP_USER:$APP_USER" {} +
-  mkdir -p /tmp/renovate-work
-  chown "$APP_USER:$APP_USER" /tmp/renovate-work
-}
-
 main() {
   bashio::log.info "Starting Renovate $(cat /etc/renovate-app/version)"
   install_extra_packages
   configure_certificates
-  prepare_data_directory
+  /usr/lib/renovate-app/prepare-data.sh /data "$APP_USER" /tmp/renovate-work
 
   export HOME=/data/home
   export NODE_ENV=production

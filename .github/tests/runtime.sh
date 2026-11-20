@@ -32,7 +32,25 @@ check 'Node.js has the built-in SQLite driver' node --disable-warning=Experiment
 check 'Renovate starts and reports its version' renovate_reports_version
 check 'Renovate is the only copy: no regular expression engine to compile' test ! -e /opt/renovate/node_modules/re2
 
+# The app starts as its unprivileged user in a data folder that belongs to root, like /data in Home Assistant.
+app_user_can_create_its_database() {
+  local dir status=0
+  dir="$(mktemp -d)"
+  chmod 755 "$dir"
+  /usr/lib/renovate-app/prepare-data.sh "$dir" renovate "${dir}/work"
+  s6-setuidgid renovate env DATA_DIR="$dir" node --disable-warning=ExperimentalWarning --input-type=module -e "
+    import { paths } from '${APP_ROOT}/server/paths.mjs';
+    import { openDatabase } from '${APP_ROOT}/server/db/database.mjs';
+    import { loadOrCreateKey } from '${APP_ROOT}/server/security/crypto.mjs';
+    loadOrCreateKey(paths.keyFile);
+    openDatabase(paths.database, paths.migrations).close();
+  " || status=$?
+  rm -rf -- "$dir"
+  return "$status"
+}
+
 # The shipped files.
+check 'the unprivileged user can create the database in a root-owned data folder' app_user_can_create_its_database
 check 'the app version file exists' test -s /etc/renovate-app/version
 check 'the web interface is part of the image' test -s "${APP_ROOT}/ui/index.html"
 check 'the unprivileged user exists' id renovate
