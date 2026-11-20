@@ -1,4 +1,6 @@
+.engine
 .engine/
 __pycache__/
 *.py[cod]
 **/data/options.json
+node_modules/

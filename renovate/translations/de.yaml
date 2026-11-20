@@ -1,0 +1,210 @@
+configuration:
+  general:
+    name: "Darstellung"
+    description: "Sprache, Farben und Protokollierung."
+    fields:
+      language:
+        name: "Sprache"
+        description: "Automatisch folgt Home Assistant."
+      theme:
+        name: "Design"
+        description: "Automatisch folgt Home Assistant, dann deinem System."
+      accent:
+        name: "Akzentfarbe"
+        description: "Blau ist die Vorgabe. Home Assistant übernimmt die Primärfarbe deines Home-Assistant-Designs."
+      accent_color:
+        name: "Eigene Akzentfarbe"
+        description: "Wird verwendet, wenn die Akzentfarbe auf „Eigene“ steht. Format #RRGGBB."
+      log_level:
+        name: "Protokollstufe der App"
+        description: "Wie viel die App ins Protokoll schreibt. Den Detailgrad von Renovate selbst stellst du unter Erweitert ein."
+      timezone:
+        name: "Zeitzone"
+        description: "Wird für den Zeitplan verwendet, zum Beispiel Europe/Berlin. Leer nutzt die Zeitzone von Home Assistant."
+  schedule:
+    name: "Zeitplan"
+    description: "Wann Renovate von selbst läuft."
+    fields:
+      mode:
+        name: "Automatische Läufe"
+        description: "Cron nutzt einen Zeitplan, Intervall wiederholt nach fester Zeit, Manuell startet nie von selbst."
+      cron:
+        name: "Cron-Zeitplan"
+        description: "Fünf Felder: Minute Stunde Tag Monat Wochentag. 0 */6 * * * bedeutet alle sechs Stunden."
+      interval_minutes:
+        name: "Intervall (Minuten)"
+        description: "Wird verwendet, wenn die automatischen Läufe auf Intervall stehen."
+      run_on_start:
+        name: "Beim Start der App ausführen"
+        description: "Startet kurz nach dem Start der App einen Lauf."
+  resources:
+    name: "Ressourcen"
+    description: "Wie viel von diesem Gerät ein Lauf nutzen darf. Das automatische Profil passt sich dem Arbeitsspeicher an."
+    fields:
+      profile:
+        name: "Ressourcenprofil"
+        description: "Sparsam für einen Raspberry Pi, Ausgewogen für die meisten Systeme, Leistung für starke Geräte. Automatisch wählt nach Arbeitsspeicher."
+      max_concurrent_runs:
+        name: "Parallele Läufe"
+        description: "Wie viele Verbindungen gleichzeitig verarbeitet werden. Überschreibt das Profil."
+      memory_limit_mb:
+        name: "Speicher pro Lauf (MB)"
+        description: "Obergrenze für den Speicher eines Renovate-Prozesses. Überschreibt das Profil."
+      batch_size:
+        name: "Repositories pro Durchgang"
+        description: "Renovate wird nach dieser Anzahl neu gestartet, das hält den Speicherbedarf niedrig. Überschreibt das Profil."
+      cpu_priority:
+        name: "CPU-Rücksichtnahme"
+        description: "0 ist normal, 19 am rücksichtsvollsten. Höhere Werte halten Home Assistant flüssig. Überschreibt das Profil."
+      run_timeout_minutes:
+        name: "Zeitlimit pro Lauf (Minuten)"
+        description: "Ein Lauf, der länger dauert, wird gestoppt."
+  history:
+    name: "Verlauf"
+    description: "Wie lange Läufe und ihre Protokolle aufbewahrt werden."
+    fields:
+      keep_runs:
+        name: "Aufzubewahrende Läufe"
+        description: "Ältere Läufe werden entfernt."
+      keep_log_days:
+        name: "Tage für Protokolle"
+        description: "Ältere Läufe werden samt Protokoll entfernt."
+  renovate:
+    name: "Renovate"
+    description: "Standardwerte für alle Repositories. Eine renovate.json im Repository kann die meisten überschreiben."
+    fields:
+      dry_run:
+        name: "Probelauf"
+        description: "Aus nimmt echte Änderungen vor. Die anderen Modi schauen nur: extract findet Abhängigkeiten, lookup prüft auch auf Updates, full simuliert alles."
+      onboarding:
+        name: "Onboarding-Pull-Request"
+        description: "Öffnet in Repositories ohne Konfiguration einen Pull Request „Configure Renovate“. Aus bedeutet, dass Renovate keine Konfiguration braucht, siehe unten."
+      onboarding_preset:
+        name: "Onboarding-Preset"
+        description: "Das Preset, das in den Onboarding-Pull-Request geschrieben wird."
+      require_config:
+        name: "Konfigurationsdatei"
+        description: "Erforderlich: nur Repositories mit Konfiguration werden verarbeitet. Optional: Repositories ohne Konfiguration laufen mit Standardwerten. Ignoriert: Dateien im Repository werden nicht gelesen."
+      git_author:
+        name: "Commit-Autor"
+        description: "Name und Adresse der Commits, als Name <Adresse>. Leer nutzt den Standard von Renovate."
+      default_extends:
+        name: "Standard-Presets"
+        description: "Presets für alle Repositories, zum Beispiel group:allNonMajor."
+      default_labels:
+        name: "Standard-Labels"
+        description: "Labels, die jeder Pull Request erhält."
+      pr_concurrent_limit:
+        name: "Gleichzeitig offene Pull Requests"
+        description: "Maximum pro Repository. 0 bedeutet kein Limit. Leer nutzt den Standard von Renovate."
+      pr_hourly_limit:
+        name: "Neue Pull Requests pro Stunde"
+        description: "Maximum pro Repository. 0 bedeutet kein Limit. Leer nutzt den Standard von Renovate."
+      github_com_token:
+        name: "Token für github.com"
+        description: "Damit liest Renovate Release Notes und Changelogs von GitHub ohne Rate-Limit. Ein Token ohne Berechtigungen genügt."
+      host_rules:
+        name: "Zugangsdaten für Registries"
+        description: "Anmeldungen für private Paketquellen, zum Beispiel eine Docker-Registry oder einen npm-Proxy."
+        fields:
+          match_host:
+            name: "Host oder Adresse, z. B. ghcr.io"
+            description: "Host oder Adresse, z. B. ghcr.io"
+          username:
+            name: "Benutzername"
+            description: "Benutzername"
+          password:
+            name: "Passwort"
+            description: "Passwort"
+          token:
+            name: "Token"
+            description: "Token"
+      config_file:
+        name: "Konfigurationsdatei im App-Ordner"
+        description: "Eine JSON-Datei mit Renovate-Optionen im Konfigurationsordner der App (addon_configs). Wird über die obigen Standardwerte gelegt."
+  webhooks:
+    name: "Webhooks"
+    description: "Der Git-Server löst Läufe aus, wenn etwas passiert."
+    fields:
+      enabled:
+        name: "Webhooks empfangen"
+        description: "Öffnet einen Port, an den Git-Server Ereignisse senden können."
+      port:
+        name: "Port"
+        description: "Aktiviere diesen Port zusätzlich in den Netzwerk-Einstellungen der App."
+      public_url:
+        name: "Öffentliche Adresse"
+        description: "Die Adresse, unter der dein Git-Server den Port erreicht, zum Beispiel https://hooks.example.org. Ohne sie lassen sich Webhooks nicht automatisch einrichten."
+      debounce_seconds:
+        name: "Wartezeit vor dem Lauf (Sekunden)"
+        description: "Ereignisse in dieser Zeit werden zu einem Lauf zusammengefasst."
+      ignore_own_events:
+        name: "Eigene Ereignisse von Renovate ignorieren"
+        description: "Verhindert, dass Renovates eigene Pull Requests in einer Schleife neue Läufe starten."
+  home_assistant:
+    name: "Home Assistant"
+    description: "Was die App an Home Assistant meldet."
+    fields:
+      sensors:
+        name: "Sensoren"
+        description: "Erstellt sensor.renovate_status, sensor.renovate_open_pull_requests und sensor.renovate_last_run."
+      events:
+        name: "Ereignisse"
+        description: "Löst nach jedem Lauf das Ereignis renovate_run_finished aus, für Automationen."
+      failure_notification:
+        name: "Bei Fehlern benachrichtigen"
+        description: "Zeigt in Home Assistant eine Benachrichtigung, wenn ein Lauf fehlschlägt."
+  advanced:
+    name: "Erweitert"
+    description: "Für Sonderfälle: Zertifikate, zusätzliche Werkzeuge, Umgebungsvariablen."
+    fields:
+      renovate_log_level:
+        name: "Protokollstufe von Renovate"
+        description: "Detailgrad der Lauf-Protokolle. Debug ist sehr ausführlich."
+      extra_packages:
+        name: "Zusätzliche Systempakete"
+        description: "Alpine-Pakete, die beim Start der App installiert werden, zum Beispiel python3, py3-pip oder go. Nötig, wenn Renovate diese Werkzeuge ausführen muss, um Lock-Dateien zu aktualisieren."
+      extra_env:
+        name: "Zusätzliche Umgebungsvariablen"
+        description: "Werden an jeden Renovate-Lauf übergeben, zum Beispiel Proxy- oder Registry-Einstellungen."
+        fields:
+          name:
+            name: "Name"
+            description: "Name"
+          value:
+            name: "Wert"
+            description: "Wert"
+      ca_certificate:
+        name: "CA-Zertifikat"
+        description: "Dateiname einer Zertifizierungsstelle in /ssl oder im App-Ordner. Nötig für Server mit selbst erstelltem Zertifikat."
+      insecure_tls:
+        name: "Zertifikate nicht prüfen"
+        description: "Akzeptiert jedes Zertifikat. Unsicher: besser das CA-Zertifikat hinterlegen."
+      github_client_id:
+        name: "GitHub-OAuth-Client-ID"
+        description: "Nutze deine eigene GitHub-OAuth-App (mit aktiviertem Device Flow) für die Anmeldung per Code."
+  connections:
+    name: "Verbindungen"
+    description: "Git-Server-Konten, die hier statt in der Weboberfläche festgelegt werden. Dort sind sie schreibgeschützt. Praktisch, um die App allein per Konfiguration einzurichten."
+    fields:
+      name:
+        name: "Name"
+        description: "Name der Verbindung."
+      provider:
+        name: "Servertyp"
+        description: "github, gitlab, gitea oder forgejo."
+      url:
+        name: "Adresse"
+        description: "Adresse deines Servers, zum Beispiel https://git.example.org. Leer für github.com und gitlab.com."
+      token:
+        name: "Zugriffstoken"
+        description: "Token mit der Berechtigung, Branches zu pushen und Pull Requests zu öffnen."
+      repositories:
+        name: "Repositories"
+        description: "Kommagetrennte Liste wie owner/eins, owner/zwei. Leer verarbeitet jedes Repository, auf das das Konto pushen darf."
+      include:
+        name: "Einschluss-Muster"
+        description: "Kommagetrennte Muster wie my-org/*. Nur wirksam, wenn keine Repositories aufgelistet sind."
+      exclude:
+        name: "Ausschluss-Muster"
+        description: "Kommagetrennte Muster, die nie verarbeitet werden."

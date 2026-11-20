@@ -1,0 +1,10 @@
+{
+  "name": "renovate-app-server",
+  "private": true,
+  "type": "module",
+  "description": "Control plane of the Renovate app for Home Assistant: scheduler, job queue, connections and web interface around the open-source Renovate CLI.",
+  "license": "MIT",
+  "engines": {
+    "node": ">=24.11.0"
+  }
+}
