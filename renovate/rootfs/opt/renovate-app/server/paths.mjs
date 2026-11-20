@@ -5,8 +5,14 @@ import { fileURLToPath } from 'node:url';
 const appRoot = process.env.APP_ROOT ?? path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const data = process.env.DATA_DIR ?? '/data';
 
+// When the server runs as root (it does in the container), every Renovate process starts as this user instead.
+const runAsUid = Number(process.env.RUN_AS_UID);
+const runAsGid = Number(process.env.RUN_AS_GID);
+const runAs = process.getuid?.() === 0 && Number.isInteger(runAsUid) && runAsUid > 0 ? { uid: runAsUid, gid: Number.isInteger(runAsGid) ? runAsGid : runAsUid } : null;
+
 export const paths = Object.freeze({
   appRoot,
+  runAs,
   ui: path.join(appRoot, 'ui'),
   migrations: path.join(appRoot, 'db'),
   data,

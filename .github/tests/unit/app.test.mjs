@@ -55,7 +55,7 @@ test('the API answers health, boot data and refuses requests without the CSRF he
   assert.equal(boot.renovate.url, 'https://github.com/renovatebot/renovate/releases/tag/44.0.0-test');
   assert.equal(boot.general.accent, 'custom');
   assert.equal(boot.general.accentColor, '#112233');
-  assert.deepEqual(boot.providers.map((provider) => provider.id), ['github', 'gitlab', 'gitea', 'forgejo']);
+  assert.deepEqual(boot.providers.map((provider) => provider.id), ['github', 'gitlab', 'gitea', 'forgejo', 'bitbucket', 'bitbucket-server', 'azure', 'gerrit', 'scm-manager']);
   const blocked = await call('POST', '/api/runs', {}, { 'Content-Type': 'application/json' });
   assert.equal(blocked.status, 403);
   assert.equal(blocked.data.error.code, 'missing_request_header');
@@ -235,4 +235,19 @@ test('the app notices a changed options.json by itself', async (t) => {
     await new Promise((resolve) => setTimeout(resolve, 100));
   }
   assert.deepEqual((await call('GET', '/api/connections')).data.map((connection) => connection.name), ['Watched']);
+});
+
+test('an app configuration the app cannot read is reported instead of being ignored silently', async (t) => {
+  const { call, dir } = await startApp(t);
+  const file = path.join(dir, 'options.json');
+  writeFileSync(file, '{ this is not json');
+  const result = await call('POST', '/api/configuration/reload');
+  assert.equal(result.data.changed, false);
+  const [problem] = result.data.configuration.problems;
+  assert.equal(problem.name, 'options.json');
+  assert.match(problem.message, /cannot be read: it is not valid JSON/);
+  writeFileSync(file, JSON.stringify({ schedule: { cron: '9 9 * * *' } }));
+  const fixed = await call('POST', '/api/configuration/reload');
+  assert.equal(fixed.data.changed, true);
+  assert.deepEqual(fixed.data.configuration.problems, []);
 });

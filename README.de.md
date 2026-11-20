@@ -9,8 +9,8 @@ Abhängigkeiten veralten unbemerkt: ein Docker-Tag hier, eine GitHub Action dort
 
 ## Warum diese App
 
-- **Verbinden in einer Minute.** Wähle deinen Server und melde dich auf dem einfachsten Weg an: per Kurzcode bei GitHub, mit deinem Login bei Gitea und Forgejo (die App erstellt ein Token mit genau den richtigen Rechten, dein Passwort wird nie gespeichert) oder über eine vorausgefüllte Token-Seite bei GitLab. Die Gitea-App von Home Assistant wird automatisch gefunden.
-- **GitHub, GitLab, Gitea und Forgejo** in einer App, beliebig viele Konten nebeneinander. Selbst gehostete Server, GitHub Enterprise und Codeberg funktionieren ebenfalls.
+- **Verbinden in einer Minute.** Wähle deinen Server und melde dich auf dem einfachsten Weg an: per Kurzcode bei GitHub, mit deinem Login bei Gitea und Forgejo (die App erstellt ein Token mit genau den richtigen Rechten, dein Passwort wird nie gespeichert) über eine Anmeldung auf der eigenen Seite des Servers (Passkey, YubiKey, Single Sign-on) oder über eine vorausgefüllte Token-Seite. Die Gitea-App von Home Assistant wird automatisch gefunden.
+- **GitHub, GitLab, Gitea, Forgejo, Bitbucket, Azure DevOps, Gerrit und SCM-Manager** in einer App, beliebig viele Konten nebeneinander. Selbst gehostete Server, GitHub Enterprise und Codeberg funktionieren ebenfalls.
 - **Sicherer Einstieg.** Ein *Vorschau-Lauf* zeigt, was Renovate tun würde, ohne etwas zu ändern. Repositories schaltest du einzeln ein, und Renovates Pull Request „Configure Renovate“ muss zuerst von dir übernommen werden, bevor es ein Repository anfasst.
 - **Gemacht für kleine Geräte.** Ein einziger Node.js-Prozess, der zwischen den Läufen schläft, SQLite statt Datenbankserver, Läufe in kleinen Durchgängen mit Speicherlimit und niedriger CPU-Priorität. Ein Ressourcenprofil wird automatisch nach deinem Arbeitsspeicher gewählt, ein Raspberry Pi ist also genauso willkommen wie ein Mini-PC.
 - **Immer das neueste Renovate, exakt gepinnt.** Die Renovate-Version ist im Image festgelegt. Ein neues Renovate-Release hebt die Version an und veröffentlicht automatisch eine neue App-Version. Du bekommst frische Versionen, ohne je ein ungepinntes Image zu betreiben.
@@ -28,12 +28,19 @@ Abhängigkeiten veralten unbemerkt: ein Docker-Tag hier, eine GitHub Action dort
 
 | Server | Anmeldung | Hinweise |
 | --- | --- | --- |
-| GitHub, GitHub Enterprise Server | Code (Device Flow) oder Token | Für die Anmeldung per Code braucht es eine OAuth-App, siehe [Anmeldung per Code einrichten](renovate/DOCS.md#sign-in-with-a-code-github) |
-| GitLab, self-managed GitLab | Token (vorausgefüllte Seite) | Device-Tokens von GitLab laufen nach zwei Stunden ab, deshalb kommen persönliche Zugriffstoken zum Einsatz |
-| Gitea | Passwort (erstellt ein Token) oder Token | Die Gitea-App von Home Assistant wird erkannt |
-| Forgejo, Codeberg | Passwort (erstellt ein Token) oder Token | |
+| GitHub, GitHub Enterprise Server | Code (Device Flow) oder Token | Für die Anmeldung per Code braucht es eine OAuth-App, siehe [Anmeldung per Code einrichten](renovate/DOCS.de.md#mit-code-anmelden-github) |
+| GitLab, self-managed GitLab | Token (vorausgefüllte Seite) oder **Browser-Anmeldung** | Die Browser-Anmeldung funktioniert mit Single Sign-on; die App erneuert die kurzlebigen Tokens |
+| Gitea | Passwort (erstellt ein Token), **Browser-Anmeldung (Passkey, YubiKey, SSO)** oder Token | Die Gitea-App von Home Assistant wird erkannt |
+| Forgejo, Codeberg | Passwort (erstellt ein Token), **Browser-Anmeldung** oder Token | |
+| Bitbucket Cloud | Benutzername und API-Token | Beta |
+| Bitbucket Server / Data Center | HTTP-Zugriffstoken | Beta |
+| Azure DevOps (Services und Server) | Persönliches Zugriffstoken | Beta |
+| Gerrit | Benutzername und HTTP-Passwort | Beta, in Renovate experimentell |
+| SCM-Manager 3 | API-Schlüssel | Beta, in Renovate experimentell |
 
-Weitere Server, die Renovate unterstützt (Bitbucket, Azure DevOps, ...), lassen sich als eine Datei in `server/providers/` ergänzen, siehe [Mitmachen](#mitmachen).
+Die **Browser-Anmeldung** ist der Weg für Konten, die mit einem Passkey oder einem Sicherheitsschlüssel wie dem YubiKey 5 NFC geschützt sind: Du meldest dich auf der eigenen Seite deines Servers an, wo diese wie gewohnt funktionieren, und die App sieht nie ein Passwort. Sie braucht eine einmalige Registrierung der App auf dem Server und keine öffentliche Adresse, siehe [Browser-Anmeldung](renovate/DOCS.de.md#browser-anmeldung-passkey-yubikey-sso).
+
+Die mit **Beta** gekennzeichneten Server wurden nach der Dokumentation von Renovate gebaut und gegen aufgezeichnete API-Antworten getestet, nicht gegen echte Installationen. Melde bitte, was nicht funktioniert. Sie haben keine Webhooks; der Zeitplan startet ihre Läufe. AWS CodeCommit wird nicht unterstützt: Seine Anfragen brauchen AWS-Signaturen, was eine große Abhängigkeit mitbrächte.
 
 ## Schnellstart
 
@@ -76,12 +83,13 @@ Was CE zum „Server“ macht (Zeitplan, Warteschlange, Webhooks, Status), ergä
 - **Experimentell.** Siehe Hinweis ganz oben.
 - **Nur amd64 und aarch64.** Renovate braucht Node.js 24, das ältere Alpine-Versionen für 32-Bit-Systeme nicht bieten. Home Assistant hat 32-Bit-Systeme ohnehin eingestellt.
 - **Pull Requests kommen von dem Konto, das du verbindest.** Nutze für einen sauberen Verlauf ein eigenes „renovate“-Konto. Das Token einer GitHub App oder eines GitLab-Bots lässt sich ebenfalls als Token einfügen.
-- **GitLab hat keine Code-Anmeldung** (siehe oben). Die für dich ausgefüllte Token-Seite ist die Abkürzung.
+- **Tokens der Browser-Anmeldung laufen ab**, bei Gitea nach einer Stunde, bei GitLab nach zwei. Die App erneuert sie vor jedem Lauf; widerruft ein Server die Anmeldung, muss die Verbindung neu hinzugefügt werden.
 - **Lock-Dateien von Nicht-JavaScript-Projekten** brauchen ihre Werkzeuge. Das Image enthält Node.js, npm und Git; ergänze `python3`, `py3-pip`, `go` und weitere unter *Zusätzliche Systempakete*, wenn deine Repositories sie brauchen. Docker-in-Docker (`binarySource: docker`) steht nicht zur Verfügung.
 - **Sicherheitsnetz für reguläre Ausdrücke entfernt.** Renovates optionale `re2`-Engine ist nicht im Image, Renovate nutzt die eingebaute. Das spielt nur eine Rolle, wenn du nicht vertrauenswürdigen Personen erlaubst, die Renovate-Konfiguration deiner Repositories zu ändern.
 - **Webhooks brauchen eine erreichbare Adresse.** Ohne öffentliche URL (Reverse Proxy, Tunnel) übernimmt der Zeitplan, was für die meisten Haushalte völlig ausreicht.
 - **Sensoren sind keine Registry-Entitäten.** Sie verschwinden beim Neustart von Home Assistant bis zur nächsten Aktualisierung durch die App, die wenige Sekunden nach ihrem Start erfolgt.
 - **Ein Benutzer.** Den Zugriff regelt Home Assistant (standardmäßig nur Administratoren). Die App hat keine eigenen Konten.
+- **Der Server läuft mit den Rechten des Containers.** Home Assistant hält die App-Konfiguration nur für root lesbar, und die App folgt ihr live. Renovate selbst, das Paketmanager auf deinen Repositories ausführt, startet immer als unprivilegierter Benutzer.
 
 ## Updates und Versionen
 

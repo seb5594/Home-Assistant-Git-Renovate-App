@@ -32,25 +32,37 @@ check 'Node.js has the built-in SQLite driver' node --disable-warning=Experiment
 check 'Renovate starts and reports its version' renovate_reports_version
 check 'Renovate is the only copy: no regular expression engine to compile' test ! -e /opt/renovate/node_modules/re2
 
-# The app starts as its unprivileged user in a data folder that belongs to root, like /data in Home Assistant.
-app_user_can_create_its_database() {
+# The server keeps the privileges of the container (Home Assistant's options.json is readable for root only)
+# and starts Renovate as the unprivileged user. That user must be able to write what Renovate needs.
+renovate_user_can_write_its_folders() {
   local dir status=0
   dir="$(mktemp -d)"
   chmod 755 "$dir"
   /usr/lib/renovate-app/prepare-data.sh "$dir" renovate "${dir}/work"
-  s6-setuidgid renovate env DATA_DIR="$dir" node --disable-warning=ExperimentalWarning --input-type=module -e "
-    import { paths } from '${APP_ROOT}/server/paths.mjs';
-    import { openDatabase } from '${APP_ROOT}/server/db/database.mjs';
-    import { loadOrCreateKey } from '${APP_ROOT}/server/security/crypto.mjs';
-    loadOrCreateKey(paths.keyFile);
-    openDatabase(paths.database, paths.migrations).close();
+  s6-setuidgid renovate sh -c "touch '${dir}/cache/probe' '${dir}/work/probe' '${dir}/home/probe'" || status=$?
+  rm -rf -- "$dir"
+  return "$status"
+}
+
+# A root-only options.json, as the Supervisor writes it, can be read by the server and parsed.
+server_reads_a_root_only_options_file() {
+  local dir status=0
+  dir="$(mktemp -d)"
+  chmod 755 "$dir"
+  printf '{"schedule":{"cron":"1 2 * * *"}}' >"${dir}/options.json"
+  chmod 600 "${dir}/options.json"
+  DATA_DIR="$dir" node --disable-warning=ExperimentalWarning --input-type=module -e "
+    import { readFileSync } from 'node:fs';
+    const options = JSON.parse(readFileSync('${dir}/options.json', 'utf8'));
+    if (options.schedule.cron !== '1 2 * * *') process.exit(1);
   " || status=$?
   rm -rf -- "$dir"
   return "$status"
 }
 
 # The shipped files.
-check 'the unprivileged user can create the database in a root-owned data folder' app_user_can_create_its_database
+check 'the unprivileged user can write the folders Renovate needs' renovate_user_can_write_its_folders
+check 'the server reads an options file that only root may read' server_reads_a_root_only_options_file
 check 'the app version file exists' test -s /etc/renovate-app/version
 check 'the web interface is part of the image' test -s "${APP_ROOT}/ui/index.html"
 check 'the unprivileged user exists' id renovate

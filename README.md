@@ -36,8 +36,8 @@ Dependencies age quietly: a Docker tag here, a GitHub Action there, a Python pac
 
 ## Why this app
 
-- **Connecting takes a minute.** Pick your server and sign in the easiest way it allows: a short code for GitHub, your login for Gitea and Forgejo (the app creates a token with exactly the right permissions, your password is never stored), or a pre-filled token page for GitLab. The Gitea app of Home Assistant is found automatically.
-- **GitHub, GitLab, Gitea and Forgejo** in one app, any number of accounts side by side. Self-hosted servers, GitHub Enterprise and Codeberg work too.
+- **Connecting takes a minute.** Pick your server and sign in the easiest way it allows: a short code for GitHub, your login for Gitea and Forgejo (the app creates a token with exactly the right permissions, your password is never stored), a sign-in on the server's own page for passkeys, YubiKeys and single sign-on, or a pre-filled token page. The Gitea app of Home Assistant is found automatically.
+- **GitHub, GitLab, Gitea, Forgejo, Bitbucket, Azure DevOps, Gerrit and SCM-Manager** in one app, any number of accounts side by side. Self-hosted servers, GitHub Enterprise and Codeberg work too.
 - **Safe to start.** A *preview run* shows what Renovate would do without changing anything. Repositories are switched on one by one, and Renovate's own "Configure Renovate" pull request has to be merged before it touches a repository.
 - **Made for small machines.** One Node.js process that sleeps between runs, SQLite instead of a database server, runs in small batches with a memory limit and low CPU priority. A resource profile is chosen automatically from your memory, so a Raspberry Pi is as welcome as a mini PC.
 - **Always the newest Renovate, pinned exactly.** The Renovate version is fixed in the image. A new Renovate release raises the pin and publishes a new app version by itself, so you get fresh versions without ever running an unpinned image.
@@ -56,11 +56,18 @@ Dependencies age quietly: a Docker tag here, a GitHub Action there, a Python pac
 | Server | Sign-in | Notes |
 | --- | --- | --- |
 | GitHub, GitHub Enterprise Server | Code (device flow) or token | The code sign-in needs an OAuth app, see [setting up the code sign-in](renovate/DOCS.md#sign-in-with-a-code-github) |
-| GitLab, self-managed GitLab | Token (pre-filled page) | GitLab's device tokens expire after two hours, so personal access tokens are used |
-| Gitea | Password (creates a token) or token | The Home Assistant Gitea app is detected |
-| Forgejo, Codeberg | Password (creates a token) or token | |
+| GitLab, self-managed GitLab | Token (pre-filled page) or **browser sign-in** | The browser sign-in works with single sign-on; the app renews the short-lived tokens |
+| Gitea | Password (creates a token), **browser sign-in (passkey, YubiKey, SSO)** or token | The Home Assistant Gitea app is detected |
+| Forgejo, Codeberg | Password (creates a token), **browser sign-in** or token | |
+| Bitbucket Cloud | User name and API token | Beta |
+| Bitbucket Server / Data Center | HTTP access token | Beta |
+| Azure DevOps (Services and Server) | Personal access token | Beta |
+| Gerrit | User name and HTTP password | Beta, experimental in Renovate |
+| SCM-Manager 3 | API key | Beta, experimental in Renovate |
 
-Other servers that Renovate supports (Bitbucket, Azure DevOps, ...) can be added as one file in `server/providers/`; see [Contributing](#contributing).
+The **browser sign-in** is the way for accounts that are protected by a passkey or a security key such as a YubiKey 5 NFC: you sign in on your server's own page, where those work exactly as usual, and the app never sees a password. It needs a one-time registration of the app on the server and no public address, see [Browser sign-in](renovate/DOCS.md#browser-sign-in-passkey-yubikey-sso).
+
+The servers marked **Beta** were built from Renovate's documentation and tested against recorded API answers, not against real installations. Please report what does not work. They have no webhooks; the schedule starts their runs. AWS CodeCommit is not supported: its requests need AWS signatures, which would add a large dependency.
 
 ## Quick start
 
@@ -103,12 +110,13 @@ The part that makes CE a "server" (schedule, job queue, webhooks, status) is wha
 - **Experimental.** See the notice at the top.
 - **amd64 and aarch64 only.** Renovate needs Node.js 24, which older Alpine releases for 32-bit systems do not offer. Home Assistant has retired 32-bit systems anyway.
 - **Pull requests come from the account you connect.** Use a dedicated "renovate" account for a clean history. A GitHub App or GitLab bot token can be pasted as a token as well.
-- **GitLab has no code sign-in** (see above). A token page that is filled in for you is the shortcut.
+- **Tokens from the browser sign-in expire** after an hour (Gitea) or two (GitLab). The app renews them before every run; if a server revokes the sign-in, the connection has to be added anew.
 - **Lock files of non-JavaScript projects** need their tools. The image ships Node.js, npm and Git; add `python3`, `py3-pip`, `go` and others under *Extra system packages* when your repositories need them. Docker-in-Docker (`binarySource: docker`) is not available.
 - **Regular expression safety net removed.** Renovate's optional `re2` engine is not part of the image, so Renovate uses the built-in engine. This only matters if you let untrusted people change the Renovate configuration of your repositories.
 - **Webhooks need a reachable address.** Without a public URL (reverse proxy, tunnel) the schedule does the work, which is perfectly fine for most homes.
 - **Sensors are not registry entities.** They disappear when Home Assistant restarts until the next update of the app, which happens within seconds of its start.
 - **One user.** Access is controlled by Home Assistant (by default administrators only). There are no separate accounts in the app.
+- **The server runs with the rights of the container.** Home Assistant keeps the app configuration readable for root only, and the app follows it live. Renovate itself, which runs package managers on your repositories, always starts as an unprivileged user.
 
 ## Updates and versions
 

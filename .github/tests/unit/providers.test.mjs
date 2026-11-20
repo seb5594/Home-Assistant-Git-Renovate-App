@@ -202,5 +202,5 @@ test('the browser learns which sign-in methods exist', () => {
   assert.equal(byId.gitea.credentialLogin, true);
   assert.equal(byId.gitlab.deviceFlow, false);
   assert.equal(describeProviders({}).find((entry) => entry.id === 'github').deviceFlow, false);
-  assert.throws(() => getProvider('bitbucket'), /Unknown git server/);
+  assert.throws(() => getProvider('nope'), /Unknown git server/);
 });

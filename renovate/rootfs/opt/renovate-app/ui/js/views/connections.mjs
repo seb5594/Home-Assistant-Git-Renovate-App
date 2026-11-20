@@ -193,15 +193,23 @@ function settingsTab(connection, panel, navigate, reload) {
       h('div', { class: 'check' }, forks, h('span', {}, t('connections.skip_forks'))), h('div', { class: 'check' }, archived, h('span', {}, t('connections.skip_archived')))),
     h('section', { class: 'card stack' }, h('h3', {}, t('connections.section.renovate')), h('p', { class: 'muted' }, t('connections.extra_hint')), extra),
     h('div', { class: 'row' }, h('button', { class: 'btn primary', type: 'button', onclick: save }, t('common.save'))),
-    h('section', { class: 'card stack' }, h('h3', {}, t('connections.section.token')), h('p', { class: 'muted' }, t('connections.token_hint', { account: connection.accountLogin ?? '' })),
-      connection.tokenName ? h('p', { class: 'small muted' }, t('connections.token_name', { name: connection.tokenName })) : null,
-      h('div', { class: 'row' }, token, h('button', { class: 'btn', type: 'button', onclick: replaceToken }, t('connections.replace_token')))),
+    h('section', { class: 'card stack' }, h('h3', {}, t('connections.section.token')),
+      connection.authMethod === 'browser'
+        ? h('div', { class: 'stack' }, notice('info', t('connections.browser_login')), h('p', { class: 'muted' }, t('connections.browser_login_again')))
+        : h('div', { class: 'stack' },
+          h('p', { class: 'muted' }, t('connections.token_hint', { account: connection.accountLogin ?? '' })),
+          connection.tokenName ? h('p', { class: 'small muted' }, t('connections.token_name', { name: connection.tokenName })) : null,
+          h('div', { class: 'row' }, token, h('button', { class: 'btn', type: 'button', onclick: replaceToken }, t('connections.replace_token'))))),
     h('section', { class: 'card stack' }, h('h3', {}, t('connections.section.danger')),
       h('div', {}, h('button', { class: 'btn danger', type: 'button', onclick: remove }, t('connections.remove')))));
 }
 
 async function webhooksTab(connection, panel, navigate) {
   const info = await api.get(`connections/${connection.id}/webhook`);
+  if (info.supported === false) {
+    mount(panel, notice('info', t('webhooks.unsupported', { name: providerName(connection.provider) })));
+    return;
+  }
   const copy = (value) => h('button', { class: 'btn small', type: 'button', onclick: async () => { await navigator.clipboard?.writeText(value).catch(() => {}); toast(t('common.copied')); } }, iconCopy(), t('common.copy'));
   const register = async (event) => busy(event.currentTarget, async () => {
     try {
@@ -223,7 +231,7 @@ async function webhooksTab(connection, panel, navigate) {
       h('div', {}, h('button', { class: 'btn primary', type: 'button', disabled: !info.enabled || !info.url, onclick: register }, t('webhooks.register')))));
 }
 
-export async function connectionDetail(container, { params: [id], query, navigate }) {
+export async function connectionDetail(container, { boot, params: [id], query, navigate }) {
   mount(container, skeleton(2));
   let connection;
   let tab = query.get('tab') ?? 'repositories';
@@ -262,7 +270,8 @@ export async function connectionDetail(container, { params: [id], query, navigat
 
   async function showTab(name) {
     tab = name;
-    mount(tabs, ['repositories', 'settings', 'webhooks'].map((key) => h('button', { type: 'button', role: 'tab', aria: { selected: String(key === name) }, onclick: () => showTab(key) }, t(`connections.tab.${key}`))));
+    const webhooks = boot.providers.find((provider) => provider.id === connection.provider)?.webhooks;
+    mount(tabs, ['repositories', 'settings', ...(webhooks ? ['webhooks'] : [])].map((key) => h('button', { type: 'button', role: 'tab', aria: { selected: String(key === name) }, onclick: () => showTab(key) }, t(`connections.tab.${key}`))));
     mount(panel, skeleton(1));
     try {
       if (name === 'repositories') await repositoriesTab(connection, panel);

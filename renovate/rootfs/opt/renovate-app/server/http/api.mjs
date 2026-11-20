@@ -2,7 +2,9 @@
 import { rmSync, mkdirSync } from 'node:fs';
 import { GITEA_APP_CANDIDATES, describeProviders, getProvider } from '../providers/index.mjs';
 import { DEFAULT_CLIENT_ID } from '../providers/github.mjs';
+import { GROUPS } from '../settings/registry.mjs';
 import { requestJson } from '../providers/http.mjs';
+import { REDIRECT_URI, beginBrowserLogin, finishBrowserLogin } from '../providers/oauth.mjs';
 import { badRequest, conflict } from '../util/errors.mjs';
 import { HANDLED } from './router.mjs';
 
@@ -52,14 +54,14 @@ export function registerApi(router, app) {
 
   // --- connecting a git server ---------------------------------------------------------------------
   const describeCandidate = async (provider, endpoint, token, extra = {}) => {
-    const checked = await connections.verify({ provider, endpoint, token });
+    const checked = await connections.verify({ provider, endpoint, token, username: extra.username });
     const found = [];
     // Counting what the token can reach tells the user at once whether the permissions are right.
-    for await (const repository of getProvider(provider).listRepositories({ endpoint: checked.endpoint, token, fetch: app.fetch })) {
+    for await (const repository of getProvider(provider).listRepositories({ endpoint: checked.endpoint, token, username: checked.username, fetch: app.fetch })) {
       found.push(repository);
       if (found.length >= MAX_REPOSITORY_PREVIEW) break;
     }
-    const credentialId = credentials.put({ provider, endpoint: checked.endpoint, token, ...extra });
+    const credentialId = credentials.put({ provider, endpoint: checked.endpoint, token, ...extra, username: checked.username });
     return {
       credentialId,
       endpoint: checked.endpoint,
@@ -76,7 +78,7 @@ export function registerApi(router, app) {
     return { endpoint, ...provider.tokenGuide(endpoint) };
   });
 
-  post('/api/connect/verify', async ({ body }) => describeCandidate(body.provider, body.endpoint, String(body.token ?? '').trim()));
+  post('/api/connect/verify', async ({ body }) => describeCandidate(body.provider, body.endpoint, String(body.token ?? '').trim(), { username: body.username }));
 
   post('/api/connect/gitea', async ({ body }) => {
     const provider = getProvider(body.provider);
@@ -107,6 +109,33 @@ export function registerApi(router, app) {
     return { status: 'granted', ...(await describeCandidate(flow.provider, flow.endpoint, result.token)) };
   });
 
+  // Sign-in through the browser: the user registers the app once on the server, signs in there (password, passkey,
+  // security key, single sign-on) and pastes the address the browser ended on.
+  get('/api/connect/browser-guide', ({ query }) => {
+    const provider = getProvider(query.get('provider'));
+    if (!provider.browserLogin) throw badRequest('unsupported', 'This server type has no sign-in through the browser');
+    const endpoint = provider.normalizeEndpoint(query.get('endpoint') ?? '');
+    return { redirectUri: REDIRECT_URI, appsUrl: `${provider.webUrl(endpoint)}${provider.browserLogin.applicationsPath}`, scope: provider.browserLogin.scope };
+  });
+
+  post('/api/connect/browser/start', ({ body }) => {
+    const provider = getProvider(body.provider);
+    const clientId = String(body.clientId ?? '').trim();
+    if (!clientId) throw badRequest('client_id_required', 'The client ID of the application is required');
+    const endpoint = provider.normalizeEndpoint(body.endpoint ?? '');
+    const started = beginBrowserLogin(provider, { endpoint, clientId });
+    const flowId = flows.put({ provider: body.provider, endpoint, clientId, state: started.state, verifier: started.verifier });
+    return { flowId, authorizeUrl: started.authorizeUrl };
+  });
+
+  post('/api/connect/browser/finish', async ({ body }) => {
+    const flow = flows.peek(body.flowId);
+    const provider = getProvider(flow.provider);
+    const tokens = await finishBrowserLogin(provider, { endpoint: flow.endpoint, fetch: app.fetch }, { clientId: flow.clientId, verifier: flow.verifier, state: flow.state, pasted: body.pasted });
+    flows.take(body.flowId);
+    return describeCandidate(flow.provider, flow.endpoint, tokens.accessToken, { oauth: { clientId: flow.clientId, refreshToken: tokens.refreshToken, expiresAt: tokens.expiresAt } });
+  });
+
   post('/api/connect/discover', async () => {
     const found = [];
     await Promise.all(GITEA_APP_CANDIDATES.map(async (url) => {
@@ -124,8 +153,8 @@ export function registerApi(router, app) {
   get('/api/connections', () => connections.list());
   post('/api/connections', async ({ body }) => {
     const credential = body.credentialId ? credentials.take(body.credentialId) : null;
-    const source = credential ?? { provider: body.provider, endpoint: body.endpoint, token: body.token };
-    const { connection, warnings } = await connections.create({ name: body.name, provider: source.provider, endpoint: source.endpoint, token: source.token, tokenName: credential?.tokenName ?? null, mode: body.mode ?? 'selected' });
+    const source = credential ?? { provider: body.provider, endpoint: body.endpoint, token: body.token, username: body.username };
+    const { connection, warnings } = await connections.create({ name: body.name, provider: source.provider, endpoint: source.endpoint, token: source.token, username: source.username ?? null, oauth: credential?.oauth ?? null, tokenName: credential?.tokenName ?? null, mode: body.mode ?? 'selected' });
     const patch = {};
     for (const key of ['includePatterns', 'excludePatterns', 'skipForks', 'skipArchived']) if (key in body) patch[key] = body[key];
     if (Object.keys(patch).length) connections.update(connection.id, patch);
@@ -155,7 +184,9 @@ export function registerApi(router, app) {
 
   get('/api/connections/:id/webhook', ({ params }) => {
     const publicUrl = settings.get('webhooks.public_url');
+    if (!getProvider(connections.get(params.id).provider).webhooks) return { supported: false };
     return {
+      supported: true,
       enabled: settings.get('webhooks.enabled'),
       url: publicUrl ? `${publicUrl}/hooks/${params.id}` : null,
       secret: connections.getWebhookSecret(params.id),
@@ -247,10 +278,10 @@ export function registerApi(router, app) {
   });
 
   // --- settings and maintenance --------------------------------------------------------------------------
-  get('/api/settings', () => ({ settings: settings.describe(), resources: app.getResources(), machine: app.machine }));
+  get('/api/settings', () => ({ groups: GROUPS, settings: settings.describe(), resources: app.getResources(), machine: app.machine }));
   router.add('PUT', '/api/settings', ({ body }) => {
     settings.update(body.changes ?? {});
-    return { settings: settings.describe(), resources: app.getResources() };
+    return { groups: GROUPS, settings: settings.describe(), resources: app.getResources() };
   });
 
   post('/api/configuration/reload', async () => ({ ...(await app.reloadConfiguration()), configuration: app.configuration }));

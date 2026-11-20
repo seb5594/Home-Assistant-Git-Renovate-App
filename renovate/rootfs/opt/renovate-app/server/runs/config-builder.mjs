@@ -90,8 +90,14 @@ export function buildRenovateEnv({ processEnv, connection, renovate, settings, r
     RENOVATE_X_IGNORE_RE2: 'true',
     NODE_OPTIONS: `--max-old-space-size=${resources.memoryLimitMb}`,
     RENOVATE_CONFIG_FILE: files.configFile,
-    RENOVATE_TOKEN: connection.token,
   });
+  // Bitbucket Cloud and Gerrit sign in with a user name and a password (an API token), the others with a token.
+  if (renovate.auth === 'password') {
+    env.RENOVATE_USERNAME = renovate.username;
+    env.RENOVATE_PASSWORD = connection.token;
+  } else {
+    env.RENOVATE_TOKEN = connection.token;
+  }
 
   // Release notes and changelogs come from GitHub. On github.com the connection's own token does that job.
   const githubToken = settings['renovate.github_com_token'] || (renovate.platform === 'github' && !renovate.endpoint ? connection.token : null);

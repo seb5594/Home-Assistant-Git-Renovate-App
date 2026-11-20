@@ -44,6 +44,7 @@ export function createWebhookIntake({ connections, queue, settings, timers = { s
         throw error;
       }
       const provider = getProvider(connection.provider);
+      if (!provider.webhooks) return reply(404, { error: 'webhooks_unsupported' });
       if (!provider.webhooks.verify(headers, rawBody, connection.webhookSecret)) return reply(401, { error: 'bad_signature' });
 
       let payload;

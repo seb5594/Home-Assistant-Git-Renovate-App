@@ -36,12 +36,18 @@ function readText(file, fallback) {
   }
 }
 
-/** The app configuration as Home Assistant wrote it, or null when there is none (local runs, tests). */
-function readOptions(file) {
+/**
+ * The app configuration as Home Assistant wrote it. `options` is null when there is none (local runs, tests);
+ * `error` says why a file that exists could not be used, so the interface can show it instead of silently
+ * running without the configuration.
+ */
+function readOptionsFile(file) {
   try {
-    return JSON.parse(readFileSync(file, 'utf8'));
-  } catch {
-    return null;
+    return { options: JSON.parse(readFileSync(file, 'utf8')), error: null };
+  } catch (error) {
+    if (error.code === 'ENOENT') return { options: null, error: null };
+    const reason = error.code === 'EACCES' ? 'permission denied' : error instanceof SyntaxError ? 'it is not valid JSON' : error.message;
+    return { options: null, error: `The app configuration (${path.basename(file)}) cannot be read: ${reason}.` };
   }
 }
 
@@ -57,7 +63,9 @@ const RESTART_KEYS = DEFINITIONS.filter((definition) => definition.restart).map(
  * @param {number} [config.port] port of the web interface
  * @param {string[]|null} [config.allowedAddresses] null disables the source check
  */
-export async function createApp({ paths, options = readOptions(paths.options) ?? {}, databaseFile = paths.database, port = 8099, allowedAddresses = INGRESS_ADDRESSES, fetch: fetcher = fetch, ha = createHomeAssistant({ fetch: fetcher }), processEnv = process.env, versionFile = '/etc/renovate-app/version' }) {
+export async function createApp({ paths, options = undefined, databaseFile = paths.database, port = 8099, allowedAddresses = INGRESS_ADDRESSES, fetch: fetcher = fetch, ha = createHomeAssistant({ fetch: fetcher }), processEnv = process.env, versionFile = '/etc/renovate-app/version' }) {
+  const initialOptions = options === undefined ? readOptionsFile(paths.options) : { options, error: null };
+  options = initialOptions.options ?? {};
   const db = openDatabase(databaseFile, paths.migrations);
   const vault = createVault(loadOrCreateKey(paths.keyFile));
   const settings = createSettings({ db, vault, options });
@@ -67,6 +75,8 @@ export async function createApp({ paths, options = readOptions(paths.options) ??
   // a restart is needed. Home Assistant rewrites options.json when the configuration is saved; the app follows.
   let currentOptions = options;
   const configuration = { problems: [], restartRequired: false, syncedAt: null };
+  let optionsReadError = initialOptions.error;
+  if (optionsReadError) log.error(optionsReadError);
   const restartSnapshot = () => JSON.stringify(RESTART_KEYS.map((key) => settings.get(key)));
   const startupSnapshot = restartSnapshot();
   let optionsWatcher = null;
@@ -112,7 +122,11 @@ export async function createApp({ paths, options = readOptions(paths.options) ??
   async function applyConfiguration() {
     const { specs, problems } = specsFromOptions(currentOptions);
     const results = await reconcileManagedConnections({ db, vault, connections, specs });
-    configuration.problems = [...problems, ...results.filter((result) => !result.ok).map(({ name, message }) => ({ name, message }))];
+    configuration.problems = [
+      ...(optionsReadError ? [{ name: 'options.json', message: optionsReadError }] : []),
+      ...problems,
+      ...results.filter((result) => !result.ok).map(({ name, message }) => ({ name, message })),
+    ];
     configuration.restartRequired = restartSnapshot() !== startupSnapshot;
     configuration.syncedAt = nowIso();
     publisher.refresh();
@@ -120,7 +134,12 @@ export async function createApp({ paths, options = readOptions(paths.options) ??
 
   /** Reads options.json again. @returns {Promise<{changed:boolean}>} */
   async function reloadConfiguration() {
-    const next = readOptions(paths.options);
+    const { options: next, error } = readOptionsFile(paths.options);
+    if (error !== optionsReadError) {
+      optionsReadError = error;
+      if (error) log.error(error);
+      await applyConfiguration();
+    }
     if (next === null || JSON.stringify(next) === JSON.stringify(currentOptions)) return { changed: false };
     currentOptions = next;
     settings.reloadOptions(next);

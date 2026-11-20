@@ -11,7 +11,7 @@ export function runBadge(run) {
   return badge(t(`run.status.${run.status}`), RUN_TONES[run.status] ?? '', { running: run.status === 'running' });
 }
 
-export const providerName = (id) => ({ github: 'GitHub', gitlab: 'GitLab', gitea: 'Gitea', forgejo: 'Forgejo' })[id] ?? id;
+export const providerName = (id) => ({ github: 'GitHub', gitlab: 'GitLab', gitea: 'Gitea', forgejo: 'Forgejo', bitbucket: 'Bitbucket Cloud', 'bitbucket-server': 'Bitbucket Server', azure: 'Azure DevOps', gerrit: 'Gerrit', 'scm-manager': 'SCM-Manager' })[id] ?? id;
 
 export const triggerName = (trigger) => t(`run.trigger.${trigger}`);
 

@@ -50,9 +50,34 @@ The pull requests are opened by the account the token belongs to. Create a separ
 
 Enter your login once. The app asks the server for a token with exactly the permissions above and stores that token, encrypted. **Your password is not stored** and is used for this one request. With two-factor authentication the assistant asks for the current code. If you later remove the connection, delete the token (named `renovate-home-assistant-…`) in your server's settings; the app cannot do that without your password.
 
+### Browser sign-in (passkey, YubiKey, SSO)
+
+For **Gitea, Forgejo and GitLab**. You sign in on the page of your server itself, so everything that page accepts works: password, a **passkey**, a **security key such as a YubiKey 5 NFC**, single sign-on. The app never sees your password. This is the way for accounts that have a security key enrolled, because those cannot create a token with their password.
+
+It works from any device and needs no public address. Once per server:
+
+1. In the assistant choose *Passkey, security key or SSO*. It shows what to enter and links to the application settings of your server (Gitea: *Settings → Applications*, GitLab: *Preferences → Applications*).
+2. Create an **OAuth2 application** named `Renovate` with the redirect URI `http://127.0.0.1:5594/callback` and **Confidential client switched off** (a public client, no secret). GitLab additionally needs the scopes `api` and `write_repository`. Copy the **client ID** the server shows.
+3. Paste the client ID, press *Prepare the sign-in* and open the sign-in page. Sign in as you always do (passkey, YubiKey on the back of the phone, ...) and approve.
+4. The browser then shows an error page, because it tries to open `127.0.0.1`. That is expected. Copy the **address of that page** from the address bar and paste it into the assistant.
+
+The tokens of such a sign-in expire after an hour (Gitea) or two (GitLab). The app renews them with the refresh token **before every run and every batch**, so a run never starts with a dying token. If the server revokes the sign-in or the refresh token expires (Gitea: 30 days without a run), the run fails with a hint, and the connection has to be added anew.
+
 ### The Gitea app of Home Assistant
 
 The assistant looks for the Gitea app of [alexbelgium/hassio-addons](https://github.com/alexbelgium/hassio-addons) at `http://db21ed7f-gitea:3000` and offers its address. Other addresses work as well; use the one your server answers on from inside Home Assistant.
+
+### Other servers
+
+| Server | What the assistant asks for |
+| --- | --- |
+| Bitbucket Cloud | Your **user name** and an **API token** with the scopes for repositories, pull requests, user and workspace (read and write). Renovate also wants a workspace group with *Create repositories* permission that contains the account. |
+| Bitbucket Server / Data Center | The address of your server and an **HTTP access token** of the account |
+| Azure DevOps | The address of your organization (`https://dev.azure.com/my-organization`, or your Server collection) and a **personal access token** with *Code* and *Work Items* read and write |
+| Gerrit | The address of the server, your **user name** and the **HTTP password** of the account. For automerge the account must be allowed to give Code-Review +2. |
+| SCM-Manager 3 | The address including `/scm` and an **API key** of the account; the Review plugin from version 3.11 must be installed |
+
+These servers are **beta**: built from Renovate's documentation and tested against recorded API answers, not against real installations. They have no webhooks. Repository names follow Renovate's format (`workspace/repo`, `PROJECT/repo`, `Project/Repo`).
 
 ## Repositories
 
@@ -71,10 +96,10 @@ A run starts from the schedule, from you (**Run now**, **Preview run**, or a sin
 
 ## Webhooks
 
-With webhooks the git server tells the app when something happens, so Renovate reacts within about a minute: after you merge a pull request, push to the default branch, or tick a box in the *Dependency Dashboard* issue. Events caused by Renovate itself are ignored.
+With webhooks (GitHub, GitLab, Gitea and Forgejo) the git server tells the app when something happens, so Renovate reacts within about a minute: after you merge a pull request, push to the default branch, or tick a box in the *Dependency Dashboard* issue. Events caused by Renovate itself are ignored.
 
 1. Switch on **Webhooks → Receive webhooks**.
-2. In the app's **Network** settings give port `8092` a number (or the port you chose).
+2. In the app's **Network** settings give port `5594` a number (or the port you chose). The default is 5594, and the port stays closed until you open it.
 3. Make that port reachable from your git server, for example through a reverse proxy, and enter the address as **Public address**.
 4. Open the connection, tab **Webhooks**, and press **Set up in all switched-on repositories**. The address and secret are shown for manual setup as well.
 
@@ -130,7 +155,13 @@ connections:
     token: !secret renovate_github_token
     include: my-org/*
     exclude: my-org/archive-*
+  - name: Bitbucket
+    provider: bitbucket
+    username: sven
+    token: !secret renovate_bitbucket_token
 ```
+
+`provider` is one of `github`, `gitlab`, `gitea`, `forgejo`, `bitbucket`, `bitbucket-server`, `azure`, `gerrit` or `scm-manager`. `username` is only used by `bitbucket` and `gerrit`. Connections from the configuration use a token; the browser sign-in is a feature of the assistant.
 
 Connections defined here are created, updated and removed at every start and are read-only in the interface. With `repositories` only those are switched on; without, every repository the account can push to is processed, narrowed by `include` and `exclude`.
 
@@ -152,52 +183,6 @@ For a server with a certificate of your own CA, put the CA file in `/ssl` (or th
 
 <!-- options:begin -->
 
-### Appearance
-
-Language, colors and logging.
-
-| Option | Description | Default |
-| --- | --- | --- |
-| `general.language`<br>**Language** | Auto follows Home Assistant. | `auto` |
-| `general.theme`<br>**Theme** | Auto follows Home Assistant, then your system. | `auto` |
-| `general.accent`<br>**Accent color** | Blue is the default. Home Assistant uses the primary color of your Home Assistant theme. | `blue` |
-| `general.accent_color`<br>**Custom accent color** | Used when the accent color is set to Custom. Format #RRGGBB. | automatic |
-| `general.log_level`<br>**Log level of the app** | How much the app writes to its log. Renovate's own detail level is set under Advanced. | `info` |
-| `general.timezone`<br>**Time zone** | Used for the schedule, for example Europe/Berlin. Empty uses the time zone of Home Assistant. | automatic |
-
-### Schedule
-
-When Renovate runs by itself.
-
-| Option | Description | Default |
-| --- | --- | --- |
-| `schedule.mode`<br>**Automatic runs** | Cron uses a schedule, interval repeats after a fixed time, manual never starts by itself. | `cron` |
-| `schedule.cron`<br>**Cron schedule** | Five fields: minute hour day month weekday. 0 */6 * * * means every six hours. | `0 */6 * * *` |
-| `schedule.interval_minutes`<br>**Interval (minutes)** | Used when automatic runs are set to Interval. | `360` |
-| `schedule.run_on_start`<br>**Run when the app starts** | Start a run a moment after the app started. | `false` |
-
-### Resources
-
-How much of this machine a run may use. The automatic profile fits the memory of your system.
-
-| Option | Description | Default |
-| --- | --- | --- |
-| `resources.profile`<br>**Resource profile** | Light for a Raspberry Pi, Balanced for most systems, Performance for strong machines. Automatic chooses by memory. | `auto` |
-| `resources.max_concurrent_runs`<br>**Parallel runs** | How many connections are processed at the same time. Overrides the profile. | automatic |
-| `resources.memory_limit_mb`<br>**Memory per run (MB)** | Upper limit for the memory of one Renovate process. Overrides the profile. | automatic |
-| `resources.batch_size`<br>**Repositories per batch** | Renovate is restarted after this many repositories, which keeps memory low. Overrides the profile. | automatic |
-| `resources.cpu_priority`<br>**CPU niceness** | 0 is normal, 19 is the most considerate. Higher values keep Home Assistant responsive. Overrides the profile. | automatic |
-| `resources.run_timeout_minutes`<br>**Time limit per run (minutes)** | A run that takes longer is stopped. | `90` |
-
-### History
-
-How long runs and their logs are kept.
-
-| Option | Description | Default |
-| --- | --- | --- |
-| `history.keep_runs`<br>**Runs to keep** | Older runs are removed. | `100` |
-| `history.keep_log_days`<br>**Days to keep logs** | Runs older than this are removed with their logs. | `30` |
-
 ### Renovate
 
 Defaults for all repositories. A renovate.json in a repository can override most of them.
@@ -217,6 +202,39 @@ Defaults for all repositories. A renovate.json in a repository can override most
 | `renovate.host_rules`<br>**Credentials for registries** | Logins for private package sources such as a Docker registry or an npm proxy. | none |
 | `renovate.config_file`<br>**Configuration file in the app folder** | A JSON file with Renovate options, placed in the app's configuration folder (addon_configs). Merged over the defaults above. | automatic |
 
+### History
+
+How long runs and their logs are kept.
+
+| Option | Description | Default |
+| --- | --- | --- |
+| `history.keep_runs`<br>**Runs to keep** | Older runs are removed. | `100` |
+| `history.keep_log_days`<br>**Days to keep logs** | Runs older than this are removed with their logs. | `30` |
+
+### Resources
+
+How much of this machine a run may use. The automatic profile fits the memory of your system.
+
+| Option | Description | Default |
+| --- | --- | --- |
+| `resources.profile`<br>**Resource profile** | Light for a Raspberry Pi, Balanced for most systems, Performance for strong machines. Automatic chooses by memory. | `auto` |
+| `resources.max_concurrent_runs`<br>**Parallel runs** | How many connections are processed at the same time. Overrides the profile. | automatic |
+| `resources.memory_limit_mb`<br>**Memory per run (MB)** | Upper limit for the memory of one Renovate process. Overrides the profile. | automatic |
+| `resources.batch_size`<br>**Repositories per batch** | Renovate is restarted after this many repositories, which keeps memory low. Overrides the profile. | automatic |
+| `resources.cpu_priority`<br>**CPU niceness** | 0 is normal, 19 is the most considerate. Higher values keep Home Assistant responsive. Overrides the profile. | automatic |
+| `resources.run_timeout_minutes`<br>**Time limit per run (minutes)** | A run that takes longer is stopped. | `90` |
+
+### Schedule
+
+When Renovate runs by itself.
+
+| Option | Description | Default |
+| --- | --- | --- |
+| `schedule.mode`<br>**Automatic runs** | Cron uses a schedule, interval repeats after a fixed time, manual never starts by itself. | `cron` |
+| `schedule.cron`<br>**Cron schedule** | Five fields: minute hour day month weekday. 0 */6 * * * means every six hours. | `0 */6 * * *` |
+| `schedule.interval_minutes`<br>**Interval (minutes)** | Used when automatic runs are set to Interval. | `360` |
+| `schedule.run_on_start`<br>**Run when the app starts** | Start a run a moment after the app started. | `false` |
+
 ### Webhooks
 
 Let the git server trigger runs when something happens.
@@ -224,7 +242,7 @@ Let the git server trigger runs when something happens.
 | Option | Description | Default |
 | --- | --- | --- |
 | `webhooks.enabled`<br>**Receive webhooks** | Opens a port that git servers can send events to. | `false` |
-| `webhooks.port`<br>**Port** | Also enable this port in the network settings of the app. | `8092` |
+| `webhooks.port`<br>**Port** | Also enable this port in the network settings of the app. | `5594` |
 | `webhooks.public_url`<br>**Public address** | The address your git server uses to reach the port, for example https://hooks.example.org. Without it, webhooks cannot be set up automatically. | automatic |
 | `webhooks.debounce_seconds`<br>**Wait before running (seconds)** | Events within this time are combined into one run. | `60` |
 | `webhooks.ignore_own_events`<br>**Ignore events caused by Renovate** | Prevents Renovate's own pull requests from starting new runs in a loop. | `true` |
@@ -238,6 +256,19 @@ What the app reports to Home Assistant.
 | `home_assistant.sensors`<br>**Sensors** | Creates sensor.renovate_status, sensor.renovate_open_pull_requests and sensor.renovate_last_run. | `true` |
 | `home_assistant.events`<br>**Events** | Fires the event renovate_run_finished after every run, for automations. | `true` |
 | `home_assistant.failure_notification`<br>**Notify on failure** | Shows a notification in Home Assistant when a run fails. | `false` |
+
+### Appearance
+
+Language, colors and logging.
+
+| Option | Description | Default |
+| --- | --- | --- |
+| `general.language`<br>**Language** | Auto follows Home Assistant. | `auto` |
+| `general.theme`<br>**Theme** | Auto follows Home Assistant, then your system. | `auto` |
+| `general.accent`<br>**Accent color** | Blue is the default. Home Assistant uses the primary color of your Home Assistant theme. | `blue` |
+| `general.accent_color`<br>**Custom accent color** | Used when the accent color is set to Custom. Format #RRGGBB. | automatic |
+| `general.log_level`<br>**Log level of the app** | How much the app writes to its log. Renovate's own detail level is set under Advanced. | `info` |
+| `general.timezone`<br>**Time zone** | Used for the schedule, for example Europe/Berlin. Empty uses the time zone of Home Assistant. | automatic |
 
 ### Advanced
 
@@ -272,5 +303,5 @@ Raise the log detail under *Advanced → Renovate log level* to `debug` for a ru
 
 - The interface is only reachable through Home Assistant's ingress; every other address on the network is refused. State-changing requests need a header a foreign website cannot send.
 - Tokens are encrypted in the database with a key stored next to it (`/data/keys`). A backup contains both, like the app configuration does.
-- Renovate runs as an unprivileged user and receives only the variables it needs. The Home Assistant token never reaches it.
+- The server runs with the rights of the container, because Home Assistant keeps the app configuration readable for root only and the app follows it live. **Renovate itself always starts as an unprivileged user** and receives only the variables it needs. The Home Assistant token never reaches it.
 - Renovate executes package managers on your repositories. Only connect repositories you trust to this machine, and keep *Ignore scripts* (Renovate's default) in place.
