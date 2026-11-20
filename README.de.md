@@ -89,7 +89,7 @@ Die Versionen sind kalenderbasiert: `YYYY.MM.DD` für den ersten Build eines Tag
 
 ## Dokumentation
 
-Die [App-Dokumentation](renovate/DOCS.md) listet jede Option und erklärt Anmeldung, Webhooks, Zertifikate, zusätzliche Werkzeuge und Fehlersuche (englisch, eine [deutsche Fassung](renovate/DOCS.de.md) liegt bei).
+📖 Die [App-Dokumentation](renovate/DOCS.md) listet jede Option und erklärt Anmeldung, Webhooks, Zertifikate, zusätzliche Werkzeuge und Fehlersuche (englisch, eine [deutsche Fassung](renovate/DOCS.de.md) liegt bei).
 
 ## Mitmachen
 
