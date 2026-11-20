@@ -57,7 +57,7 @@ LABEL io.hass.version="${BUILD_VERSION}" \
     io.hass.type="addon" \
     org.opencontainers.image.title="Home Assistant App: Renovate" \
     org.opencontainers.image.version="${BUILD_VERSION}" \
-    org.opencontainers.image.source="https://github.com/seb5594/Home-Assistant-Git-Renovate-App"
+    org.opencontainers.image.source="https://github.com/seb5594/Home-Assistant-Renovate-App"
 
 HEALTHCHECK --interval=1m --timeout=10s --start-period=1m --retries=3 \
     CMD ["curl", "--fail", "--silent", "--max-time", "5", "--output", "/dev/null", "http://127.0.0.1:8099/api/health"]
