@@ -8,15 +8,16 @@ import { createEnvironment } from './environment.mjs';
 const { buildRenovateConfig, buildRenovateEnv, chunk } = await load('runs/config-builder.mjs');
 const { resolveResources, autoProfile } = await load('runs/resources.mjs');
 const { diagnose } = await load('runs/diagnose.mjs');
+const { buildUpdateRules } = await load('runs/update-rules.mjs');
 const { summarizeReport, totals } = await load('runs/report.mjs');
 const { toEntry, createLogStore } = await load('runs/log-store.mjs');
 const { isRepositoryEnabled, globToRegExp } = await load('domain/patterns.mjs');
 
+// Every setting at its default, so a new setting needs no change here.
+const { DEFINITIONS } = await load('settings/registry.mjs');
 const baseSettings = (overrides = {}) => ({
-  'renovate.dry_run': 'off', 'renovate.onboarding': true, 'renovate.onboarding_preset': 'config:recommended',
-  'renovate.require_config': 'required', 'renovate.git_author': null, 'renovate.default_extends': [], 'renovate.default_labels': [],
-  'renovate.pr_concurrent_limit': null, 'renovate.pr_hourly_limit': null, 'renovate.host_rules': [], 'renovate.github_com_token': null,
-  'advanced.renovate_log_level': 'info', 'advanced.extra_env': [], ...overrides,
+  ...Object.fromEntries(DEFINITIONS.map((definition) => [definition.key, definition.default ?? null])),
+  ...overrides,
 });
 const directories = { baseDir: '/w/base', cacheDir: '/d/cache', reportPath: '/w/report.json' };
 
@@ -149,17 +150,18 @@ test('the report is reduced to pull requests, pending updates and problems', () 
           { branchName: 'b', prNo: 2, result: 'pr-edited' },
           { branchName: 'c', prNo: 3, result: 'automerged' },
           { branchName: 'd', result: 'not-scheduled' },
+          { branchName: 'e', prNo: 5, result: 'rebase' },
         ],
         packageFiles: { npm: [{ deps: [{ updates: [{}] }, {}] }], docker: [{ deps: [{ updates: [{}] }] }] },
       },
     },
   };
   const summary = summarizeReport(report).get('o/r');
-  assert.deepEqual({ ...summary, branches: summary.branches.length, problems: summary.problems.length }, { pending: 2, openPrs: 2, prsCreated: 1, prsUpdated: 1, automerged: 1, errors: 1, warnings: 1, problems: 2, branches: 4 });
+  assert.deepEqual({ ...summary, branches: summary.branches.length, problems: summary.problems.length }, { pending: 2, openPrs: 3, prsCreated: 1, prsUpdated: 1, automerged: 1, held: { 'pr-edited': 1, 'not-scheduled': 1 }, errors: 1, warnings: 1, problems: 2, branches: 5 });
   assert.equal(summary.branches[0].upgrades[0].to, '2');
   const detailed = summarizeReport({ repositories: { 'o/r': { problems: [{ level: 50, msg: 'Repository has unknown error', err: { message: 'Request failed with status code 404' } }] } } }).get('o/r');
   assert.equal(detailed.problems[0].message, 'Repository has unknown error: Request failed with status code 404');
-  assert.deepEqual(totals(summarizeReport(report)), { repositories: 1, pending: 2, openPrs: 2, prsCreated: 1, prsUpdated: 1, automerged: 1, errors: 1, warnings: 1 });
+  assert.deepEqual(totals(summarizeReport(report)), { repositories: 1, pending: 2, openPrs: 3, prsCreated: 1, prsUpdated: 1, automerged: 1, errors: 1, warnings: 1 });
   assert.equal(summarizeReport(null).size, 0);
 });
 
@@ -308,4 +310,48 @@ test('with a run-as user the run folders are handed over and Renovate starts as 
   const done = await env.finished(env.queue.enqueue({ connectionId: connection.id, trigger: 'manual' }).run.id);
   assert.equal(done.status, 'succeeded');
   assert.equal(JSON.parse(readFileSync(path.join(env.dir, 'dump.json'), 'utf8'))[0].config.platform, 'gitea');
+});
+
+test('update actions become package rules and top-level options', () => {
+  assert.deepEqual(buildUpdateRules(baseSettings()), { packageRules: [], options: {} });
+
+  const { packageRules, options } = buildUpdateRules(baseSettings({
+    'updates.major': 'approval', 'updates.minor': 'automerge', 'updates.patch': 'automerge',
+    'updates.minimum_age_days': 3, 'updates.merge_method': 'squash',
+  }));
+  assert.deepEqual(packageRules.map((rule) => rule.matchUpdateTypes), [['major'], ['minor'], ['patch', 'pin', 'digest', 'pinDigest']]);
+  assert.deepEqual(packageRules[0], { description: 'Renovate app: major updates', matchUpdateTypes: ['major'], dependencyDashboardApproval: true, automerge: false });
+  assert.equal(packageRules[1].automerge, true);
+  assert.deepEqual(options, { minimumReleaseAge: '3 days', minimumReleaseAgeBehaviour: 'timestamp-optional', automergeStrategy: 'squash', dependencyDashboard: true });
+
+  assert.equal(buildUpdateRules(baseSettings({ 'updates.major': 'ignore' })).packageRules[0].enabled, false);
+  assert.equal(buildUpdateRules(baseSettings({ 'updates.major': 'pr' })).packageRules[0].automerge, false);
+  assert.equal(buildUpdateRules(baseSettings({ 'updates.minimum_age_days': 1 })).options.minimumReleaseAge, '1 day');
+});
+
+test('the dashboard follows the user unless an action needs it', () => {
+  assert.equal(buildUpdateRules(baseSettings({ 'updates.dashboard': false })).options.dependencyDashboard, false);
+  assert.equal(buildUpdateRules(baseSettings({ 'updates.dashboard': true })).options.dependencyDashboard, true);
+  assert.equal(buildUpdateRules(baseSettings({ 'updates.dashboard': false, 'updates.patch': 'approval' })).options.dependencyDashboard, true);
+});
+
+test('non-major updates can share one pull request', () => {
+  const { packageRules } = buildUpdateRules(baseSettings({ 'updates.group_non_major': true }));
+  assert.equal(packageRules.length, 1);
+  assert.deepEqual(packageRules[0].matchUpdateTypes, ['minor', 'patch', 'pin', 'digest', 'pinDigest']);
+  assert.equal(packageRules[0].groupName, 'all non-major dependencies');
+});
+
+test('package rules add up in the order settings, file, connection, and the ignored authors reach Renovate', () => {
+  const config = buildRenovateConfig({
+    connection: { extraConfig: { packageRules: [{ matchPackageNames: ['c'], automerge: true }] } },
+    renovate: { platform: 'github', endpoint: null },
+    repositories: ['a/b'],
+    settings: baseSettings({ 'updates.major': 'pr' }),
+    directories,
+    userConfig: { packageRules: [{ matchPackageNames: ['f'], enabled: false }] },
+  });
+  assert.deepEqual(config.packageRules.map((rule) => rule.matchPackageNames ?? rule.matchUpdateTypes), [['major'], ['f'], ['c']]);
+  assert.deepEqual(config.gitIgnoredAuthors, ['29139614+renovate[bot]@users.noreply.github.com']);
+  assert.equal(config.dependencyDashboard, undefined);
 });

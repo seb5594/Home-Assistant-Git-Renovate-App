@@ -46,7 +46,8 @@ test('every setting has a name and an explanation in both languages, and every c
     for (const messages of [en, de]) {
       assert.ok(messages[`settings.${definition.key}.label`], `label of ${definition.key}`);
       assert.ok(messages[`settings.${definition.key}.help`], `help of ${definition.key}`);
-      for (const value of definition.values ?? []) assert.ok(messages[`settings.${definition.key}.${value}`], `${definition.key}.${value}`);
+      // The actions of the update settings share one set of labels.
+      for (const value of definition.values ?? []) assert.ok(messages[`settings.${definition.key}.${value}`] ?? messages[`settings.${groupOf(definition.key)}.action.${value}`], `${definition.key}.${value}`);
       for (const field of definition.fields ?? []) assert.ok(messages[`settings.${definition.key}.field.${field.key}`], `${definition.key}.${field.key}`);
     }
   }

@@ -2,6 +2,7 @@
 import { api } from '../api.mjs';
 import { avatar, badge, busy, configurationNotice, reportError, skeleton, toast } from '../components.mjs';
 import { h, mount } from '../dom.mjs';
+import { EMOJI, emoji } from '../emoji.mjs';
 import { duration, number, relativeTime } from '../format.mjs';
 import { iconEye, iconPlay, iconPlus } from '../icons.mjs';
 import { t } from '../i18n.mjs';
@@ -11,7 +12,7 @@ import { isActive, providerName, runBadge, triggerName } from '../status.mjs';
 function emptyOverview(navigate) {
   return h('section', { class: 'card hero' },
     h('img', { class: 'logo', src: 'assets/icon.svg', alt: '' }),
-    h('h1', {}, t('overview.empty.title')),
+    h('h1', {}, emoji('🌱'), t('overview.empty.title')),
     h('p', {}, t('overview.empty.text')),
     h('div', { class: 'steps' },
       ['connect', 'choose', 'review'].map((key, index) => h('div', { class: 'step' }, h('b', {}, index + 1), h('strong', {}, t(`overview.empty.${key}.title`)), h('span', { class: 'muted small' }, t(`overview.empty.${key}.text`))))),
@@ -66,7 +67,7 @@ function connectionCard(connection, navigate, refresh) {
 function recentRuns(runs, navigate) {
   if (!runs.length) return null;
   return h('section', { class: 'stack' },
-    h('div', { class: 'row' }, h('h2', {}, t('overview.recent_runs')), h('span', { class: 'spacer' }), h('a', { href: '#/runs' }, t('overview.all_runs'))),
+    h('div', { class: 'row' }, h('h2', {}, emoji(EMOJI.nav.runs), t('overview.recent_runs')), h('span', { class: 'spacer' }), h('a', { href: '#/runs' }, t('overview.all_runs'))),
     h('div', { class: 'table-wrap' }, h('table', {},
       h('thead', {}, h('tr', {}, h('th', {}, t('runs.col.status')), h('th', {}, t('runs.col.connection')), h('th', { class: 'hide-small' }, t('runs.col.trigger')), h('th', {}, t('runs.col.started')), h('th', { class: 'num' }, t('runs.col.prs')))),
       h('tbody', {}, runs.slice(0, 5).map((run) => h('tr', { class: 'clickable', tabindex: '0', onclick: () => navigate(`/runs/${run.id}`), onkeydown: (event) => event.key === 'Enter' && navigate(`/runs/${run.id}`) },
@@ -91,15 +92,15 @@ export async function overview(container, { navigate, refreshChip }) {
     mount(container,
       configurationNotice(status.configuration),
       h('div', { class: 'page-head' },
-        h('div', {}, h('h1', {}, t('overview.title')), h('p', {}, statusLine(status))),
+        h('div', {}, h('h1', {}, emoji(EMOJI.nav.overview), t('overview.title')), h('p', {}, statusLine(status))),
         h('div', { class: 'row' }, ...runNow(async () => { await render(); await refreshChip(); }))),
       h('div', { class: 'tiles' },
-        h('div', { class: 'tile' }, h('div', { class: 'value' }, number(openPrs)), h('div', { class: 'label' }, t('overview.tile.open_prs'))),
-        h('div', { class: 'tile' }, h('div', { class: 'value' }, number(watched)), h('div', { class: 'label' }, t('overview.tile.repositories'))),
-        h('div', { class: 'tile' }, h('div', { class: 'value' }, last ? runBadge(last) : '–'), h('div', { class: 'label' }, last ? `${t('overview.tile.last_run')} · ${relativeTime(last.finishedAt)}${last.finishedAt ? ` (${duration(last.startedAt, last.finishedAt)})` : ''}` : t('overview.tile.last_run'))),
-        h('div', { class: 'tile' }, h('div', { class: 'value' }, status.nextRunAt ? relativeTime(status.nextRunAt) : '–'), h('div', { class: 'label' }, t('overview.tile.next_run')))),
+        h('div', { class: 'tile' }, h('div', { class: 'value' }, number(openPrs)), h('div', { class: 'label' }, emoji(EMOJI.tile.open_prs), t('overview.tile.open_prs'))),
+        h('div', { class: 'tile' }, h('div', { class: 'value' }, number(watched)), h('div', { class: 'label' }, emoji(EMOJI.tile.repositories), t('overview.tile.repositories'))),
+        h('div', { class: 'tile' }, h('div', { class: 'value' }, last ? runBadge(last) : '–'), h('div', { class: 'label' }, emoji(EMOJI.tile.last_run), last ? `${t('overview.tile.last_run')} · ${relativeTime(last.finishedAt)}${last.finishedAt ? ` (${duration(last.startedAt, last.finishedAt)})` : ''}` : t('overview.tile.last_run'))),
+        h('div', { class: 'tile' }, h('div', { class: 'value' }, status.nextRunAt ? relativeTime(status.nextRunAt) : '–'), h('div', { class: 'label' }, emoji(EMOJI.tile.next_run), t('overview.tile.next_run')))),
       h('section', { class: 'stack' },
-        h('div', { class: 'row' }, h('h2', {}, t('overview.connections')), h('span', { class: 'spacer' }), h('button', { class: 'btn small', type: 'button', onclick: () => navigate('/connect') }, iconPlus(), t('connections.add'))),
+        h('div', { class: 'row' }, h('h2', {}, emoji(EMOJI.nav.connections), t('overview.connections')), h('span', { class: 'spacer' }), h('button', { class: 'btn small', type: 'button', onclick: () => navigate('/connect') }, iconPlus(), t('connections.add'))),
         h('div', { class: 'grid' }, connections.map((connection) => connectionCard(connection, navigate, render)))),
       recentRuns(runs, navigate));
     return active;

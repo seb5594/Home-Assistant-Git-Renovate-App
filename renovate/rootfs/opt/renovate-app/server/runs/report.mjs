@@ -5,7 +5,21 @@ const MAX_UPGRADES = 8;
 const MAX_PROBLEMS = 10;
 
 const CREATED = new Set(['pr-created']);
-const UPDATED = new Set(['pr-edited', 'rebase']);
+const UPDATED = new Set(['rebase']);
+
+// Results that mean "Renovate found an update but did not open or change a pull request", and why. The
+// web interface explains each one; "pr-edited" is a branch or pull request somebody else has committed to.
+export const HELD_BACK = new Set([
+  'pr-edited', 'needs-approval', 'needs-pr-approval', 'not-scheduled', 'update-not-scheduled', 'pending',
+  'pr-limit-reached', 'branch-limit-reached', 'commit-hourly-limit-reached', 'commit-per-run-limit-reached',
+  'minimum-group-size-not-met', 'error',
+]);
+
+function countHeldBack(branches) {
+  const held = {};
+  for (const branch of branches) if (HELD_BACK.has(branch.result)) held[branch.result] = (held[branch.result] ?? 0) + 1;
+  return held;
+}
 
 function countPendingUpdates(packageFiles) {
   let dependencies = 0;
@@ -46,6 +60,7 @@ export function summarizeReport(report) {
       openPrs: branches.filter((branch) => branch.prNo && branch.result !== 'automerged').length,
       prsCreated: branches.filter((branch) => CREATED.has(branch.result)).length,
       prsUpdated: branches.filter((branch) => UPDATED.has(branch.result)).length,
+      held: countHeldBack(branches),
       automerged: branches.filter((branch) => branch.result === 'automerged').length,
       errors: problems.filter((problem) => problem.level >= 50).length,
       warnings: problems.filter((problem) => problem.level === 40).length,

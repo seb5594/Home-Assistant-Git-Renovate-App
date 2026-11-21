@@ -2,6 +2,7 @@
 // the disk or the network, so the whole mapping from settings to Renovate options is covered by unit tests.
 import path from 'node:path';
 import { RESERVED_ENV } from '../settings/registry.mjs';
+import { buildUpdateRules } from './update-rules.mjs';
 
 // Only these variables of the app's own environment reach Renovate. The Supervisor token and everything
 // else stays behind, because Renovate runs code and package managers on repositories that others may change.
@@ -44,12 +45,15 @@ function hostRulesFrom(settings) {
  */
 export function buildRenovateConfig({ connection, renovate, repositories, settings, directories, userConfig = {}, dryRun = null }) {
   const configuredDryRun = settings['renovate.dry_run'] === 'off' ? null : settings['renovate.dry_run'];
+  const updates = buildUpdateRules(settings);
   const defaults = {
     onboarding: settings['renovate.onboarding'],
     onboardingConfig: { extends: [settings['renovate.onboarding_preset']] },
     requireConfig: settings['renovate.require_config'],
     dryRun: dryRun ?? configuredDryRun,
     ...(settings['renovate.git_author'] ? { gitAuthor: settings['renovate.git_author'] } : {}),
+    ...(settings['renovate.ignored_authors'].length ? { gitIgnoredAuthors: settings['renovate.ignored_authors'] } : {}),
+    ...updates.options,
     ...(settings['renovate.default_extends'].length ? { extends: settings['renovate.default_extends'] } : {}),
     ...(settings['renovate.default_labels'].length ? { labels: settings['renovate.default_labels'] } : {}),
     ...(settings['renovate.pr_concurrent_limit'] !== null ? { prConcurrentLimit: settings['renovate.pr_concurrent_limit'] } : {}),
@@ -58,6 +62,10 @@ export function buildRenovateConfig({ connection, renovate, repositories, settin
   };
   // Order, weakest first: app defaults, the user's file, the connection's own options, then what the app forces.
   const merged = { ...defaults, ...userConfig, ...connection.extraConfig };
+  // Package rules add up instead of replacing each other, and a rule further down wins. The rules of the
+  // update settings come first, so the user's file and the repository can still make exceptions.
+  const packageRules = [updates.packageRules, userConfig.packageRules, connection.extraConfig.packageRules].flatMap((rules) => rules ?? []);
+  if (packageRules.length) merged.packageRules = packageRules;
   // A preview must stay a preview, whatever the user's file says.
   if (dryRun) merged.dryRun = dryRun;
   return { ...merged, ...forcedOptions({ renovate, repositories, directories }) };

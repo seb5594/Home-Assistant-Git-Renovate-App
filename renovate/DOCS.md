@@ -38,7 +38,7 @@ For GitHub and GitLab the assistant opens the token page with the name and permi
 
 | Server | Permissions the token needs |
 | --- | --- |
-| GitHub | `repo` and `workflow` (classic), or contents, pull requests, issues and workflows with write access (fine-grained) |
+| GitHub | `repo` and `workflow` (classic), or, fine-grained: contents, pull requests, issues, workflows, commit statuses and checks with read and write access, metadata with read access |
 | GitLab | `api` and `write_repository` |
 | Gitea, Forgejo | `write:repository`, `write:issue`, `read:user`, `read:organization`, `read:misc` (`read:misc` is only needed by Gitea 1.20.0 and 1.20.1). Add `read:packages` if you use Gitea packages. |
 
@@ -87,6 +87,65 @@ Each connection has a **mode**:
 - **Automatically**: every repository the account can push to is processed, including new ones. Narrow it with *include* and *exclude* patterns (`my-org/*`, `**/archive-*`). Forks and archived repositories are skipped unless you change that.
 
 A switch in the repository list always wins over the rules. The list is refreshed before every automatic run and whenever you press **Refresh list**.
+
+## Updates: what is merged automatically
+
+Every update has a kind: **major** (1.x to 2.x), **minor** (1.1 to 1.2) or **patch** (1.1.1 to 1.1.2). Digests and pins follow the patch setting. Under *Settings → Updates and merging* you choose, for each kind, one of these actions:
+
+| Action | What happens |
+| --- | --- |
+| As the repository decides (default) | The app adds nothing. The repository's own `renovate.json` applies, so existing setups keep working. |
+| Pull request, I merge | A pull request is opened. Renovate never merges it. |
+| Ask me first | The update is only listed in the *Dependency Dashboard* issue of the repository and gets its pull request when you tick it. |
+| Merge automatically | A pull request is opened and merged as soon as its checks are green. |
+| Skip | The update is not offered at all. |
+
+Four **recipes** fill the options in one click (under *Settings → Updates and merging* and in the guide of the web interface):
+
+| Recipe | Major | Minor and patch | Also |
+| --- | --- | --- | --- |
+| Careful | pull request | pull request | |
+| Balanced (recommended) | pull request | merged automatically | a release must be 3 days old |
+| Quiet | ask first | merged automatically, one pull request for all | a release must be 3 days old |
+| Hands off | merged automatically | merged automatically | a release must be 3 days old |
+
+"Balanced" is the answer to "merge everything except major updates by itself". Notes:
+
+- Renovate merges only when the checks of the pull request are green. A repository without any checks has nothing that can stop a bad update, so be careful there and protect the default branch.
+- The settings of the app are package rules. A repository can still make exceptions with its own `packageRules` in its `renovate.json`; rules written there win. A plain `"automerge": false` at the top level of a repository does **not** win against a rule of the app, because package rules are applied on top of it.
+- *Wait after a release* holds back versions that are younger than the given days. Versions without a release date are not held back.
+
+An example of an exception in a repository:
+
+```json
+{
+  "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+  "extends": ["config:recommended"],
+  "packageRules": [
+    { "matchPackageNames": ["react"], "matchUpdateTypes": ["major"], "enabled": false },
+    { "matchManagers": ["github-actions"], "automerge": true }
+  ]
+}
+```
+
+## Your own account for commits, issues and pull requests
+
+Everything Renovate does is done as the account behind the token: pull requests, issues, comments and commits. Give it its own account, for example `renovate-bot`:
+
+1. Create the account on your git server (GitHub: a normal free account; GitLab, Gitea, Forgejo: a regular user).
+2. Give it access: add it as a collaborator with write access, or to an organization through a team with write access.
+3. Sign in as that account, create the token (see [Token](#token)) and use it for the connection. Not your own token.
+4. Optional, for the author of the commits only: *Settings → Renovate → Commit author*, for example `Renovate Bot <renovate-bot@example.org>`. Left empty, Renovate uses the name and address of the account. For GitHub to show the account's picture on the commits, use its no-reply address `ID+USERNAME@users.noreply.github.com` (the ID is at `https://api.github.com/users/USERNAME`).
+
+Pull requests and issues always carry the name of the account behind the token. The commit author setting changes the commits only. A GitHub App is not supported: the app works with tokens.
+
+## Coming from the Mend Renovate app
+
+The free cloud app of Mend and this app use the same Renovate. Your `renovate.json` (also `.github/renovate.json`) keeps working as it is. Three things to know:
+
+- **Uninstall the Mend app** from the repositories or the organization. Otherwise two bots work on the same branches.
+- **Old pull requests look "edited".** Their commits have another author than the new account, and Renovate leaves branches alone that someone else has changed. The app therefore ignores the commits of the Mend bot by default (*Settings → Renovate → Ignored commit authors*, `29139614+renovate[bot]@users.noreply.github.com`). If a branch is still marked *Edited/Blocked* in the Dependency Dashboard, tick its rebase box, or close the pull request and delete the branch.
+- Repositories that already have a configuration get no onboarding pull request again.
 
 ## Schedule and runs
 
@@ -194,13 +253,28 @@ Defaults for all repositories. A renovate.json in a repository can override most
 | `renovate.onboarding_preset`<br>**Onboarding preset** | The preset written into the onboarding pull request. | `config:recommended` |
 | `renovate.require_config`<br>**Configuration file** | Required: only repositories with a configuration are processed. Optional: repositories without one are processed with defaults. Ignored: repository files are not read. | `required` |
 | `renovate.git_author`<br>**Commit author** | Name and address of the commits, as Name <address>. Empty uses Renovate's default. | automatic |
+| `renovate.ignored_authors`<br>**Ignored commit authors** | Commits by these authors do not count as manual edits. The default is the Mend Renovate app, so pull requests it opened can be taken over. | `29139614+renovate[bot]@users.noreply.github.com` |
 | `renovate.default_extends`<br>**Default presets** | Presets applied to every repository, for example group:allNonMajor. | none |
 | `renovate.default_labels`<br>**Default labels** | Labels added to every pull request. | none |
 | `renovate.pr_concurrent_limit`<br>**Open pull requests at once** | Maximum per repository. 0 means no limit. Empty uses Renovate's default. | automatic |
-| `renovate.pr_hourly_limit`<br>**New pull requests per hour** | Maximum per repository. 0 means no limit. Empty uses Renovate's default. | automatic |
+| `renovate.pr_hourly_limit`<br>**New pull requests per hour** | Maximum per repository and run. 0 means no limit. Renovate's own default is 2, which with a run every few hours opens only two new pull requests per repository each time. | `0` |
 | `renovate.github_com_token`<br>**Token for github.com** | Lets Renovate read release notes and changelogs from GitHub without hitting rate limits. A token without any permissions is enough. | – |
 | `renovate.host_rules`<br>**Credentials for registries** | Logins for private package sources such as a Docker registry or an npm proxy. | none |
 | `renovate.config_file`<br>**Configuration file in the app folder** | A JSON file with Renovate options, placed in the app's configuration folder (addon_configs). Merged over the defaults above. | automatic |
+
+### Updates and merging
+
+What happens to each kind of update: a pull request for you to merge, an automatic merge, a question first, or nothing. Applies to all repositories; a repository can still make exceptions in its own renovate.json.
+
+| Option | Description | Default |
+| --- | --- | --- |
+| `updates.major`<br>**Major updates** | New versions that may break things, for example 1.x to 2.x. | `repository` |
+| `updates.minor`<br>**Minor updates** | New features that should stay compatible, for example 1.1 to 1.2. | `repository` |
+| `updates.patch`<br>**Patch updates** | Bug fixes and small changes, for example 1.1.1 to 1.1.2. Digests and pins follow this setting. | `repository` |
+| `updates.group_non_major`<br>**One pull request for minor and patch** | Combines all minor and patch updates of a repository into a single pull request. Works best when both use the same action. | `false` |
+| `updates.minimum_age_days`<br>**Wait after a release (days)** | A version is offered only after it has been out this long, so broken releases are found by others first. 0 switches the wait off. | `0` |
+| `updates.merge_method`<br>**Merge method** | How automatic merges are made. Automatic uses what the repository allows. | `auto` |
+| `updates.dashboard`<br>**Dependency Dashboard** | One issue per repository that lists all pending updates. Empty leaves it to the repository. It is always on while an action is set to "Ask me first". | automatic |
 
 ### History
 
@@ -296,6 +370,17 @@ For special setups: certificates, extra tools, environment variables.
 | Renovate ran out of memory | Use the Light profile, lower the batch size or raise the memory per run. |
 | No repositories are switched on | Open the connection and switch repositories on. |
 | Done with problems | Open the run and look at the repositories marked with errors. |
+
+### Issues appear, but no pull requests
+
+Open the latest run: the yellow box of a repository names the reason. The usual causes, from most to least likely:
+
+1. **A branch or pull request was changed by someone else**, or was opened by another bot account (see [Coming from the Mend Renovate app](#coming-from-the-mend-renovate-app)).
+2. **The token cannot create pull requests.** Issues work and pull requests fail when the token lacks the pull request permission (see [Token](#token)).
+3. **An action waits for you.** *Ask me first* shows the update only in the Dependency Dashboard issue until you tick it.
+4. **Dry run** is not *Off* (*Settings → Renovate*). Renovate then only looks.
+5. **A schedule in the repository** (`"schedule"` in its `renovate.json`) restricts when pull requests are opened.
+6. **Limits.** The number of open pull requests (10 per repository by default) or the wait after a release.
 
 Raise the log detail under *Advanced → Renovate log level* to `debug` for a run when you need more. Debug logs are large.
 

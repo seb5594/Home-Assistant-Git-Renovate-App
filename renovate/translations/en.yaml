@@ -46,6 +46,9 @@ configuration:
       git_author:
         name: "Commit author"
         description: "Name and address of the commits, as Name <address>. Empty uses Renovate's default."
+      ignored_authors:
+        name: "Ignored commit authors"
+        description: "Commits by these authors do not count as manual edits. The default is the Mend Renovate app, so pull requests it opened can be taken over."
       default_extends:
         name: "Default presets"
         description: "Presets applied to every repository, for example group:allNonMajor."
@@ -57,7 +60,7 @@ configuration:
         description: "Maximum per repository. 0 means no limit. Empty uses Renovate's default."
       pr_hourly_limit:
         name: "New pull requests per hour"
-        description: "Maximum per repository. 0 means no limit. Empty uses Renovate's default."
+        description: "Maximum per repository and run. 0 means no limit. Renovate's own default is 2, which with a run every few hours opens only two new pull requests per repository each time."
       github_com_token:
         name: "Token for github.com"
         description: "Lets Renovate read release notes and changelogs from GitHub without hitting rate limits. A token without any permissions is enough."
@@ -80,6 +83,31 @@ configuration:
       config_file:
         name: "Configuration file in the app folder"
         description: "A JSON file with Renovate options, placed in the app's configuration folder (addon_configs). Merged over the defaults above."
+  updates:
+    name: "Updates and merging"
+    description: "What happens to each kind of update: a pull request for you to merge, an automatic merge, a question first, or nothing. Applies to all repositories; a repository can still make exceptions in its own renovate.json."
+    fields:
+      major:
+        name: "Major updates"
+        description: "New versions that may break things, for example 1.x to 2.x."
+      minor:
+        name: "Minor updates"
+        description: "New features that should stay compatible, for example 1.1 to 1.2."
+      patch:
+        name: "Patch updates"
+        description: "Bug fixes and small changes, for example 1.1.1 to 1.1.2. Digests and pins follow this setting."
+      group_non_major:
+        name: "One pull request for minor and patch"
+        description: "Combines all minor and patch updates of a repository into a single pull request. Works best when both use the same action."
+      minimum_age_days:
+        name: "Wait after a release (days)"
+        description: "A version is offered only after it has been out this long, so broken releases are found by others first. 0 switches the wait off."
+      merge_method:
+        name: "Merge method"
+        description: "How automatic merges are made. Automatic uses what the repository allows."
+      dashboard:
+        name: "Dependency Dashboard"
+        description: "One issue per repository that lists all pending updates. Empty leaves it to the repository. It is always on while an action is set to \"Ask me first\"."
   history:
     name: "History"
     description: "How long runs and their logs are kept."

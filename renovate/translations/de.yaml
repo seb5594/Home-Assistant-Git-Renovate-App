@@ -46,6 +46,9 @@ configuration:
       git_author:
         name: "Commit-Autor"
         description: "Name und Adresse der Commits, als Name <Adresse>. Leer nutzt den Standard von Renovate."
+      ignored_authors:
+        name: "Ignorierte Commit-Autoren"
+        description: "Commits dieser Autoren gelten nicht als manuelle Änderung. Standard ist die Mend-Renovate-App, damit ihre Pull Requests übernommen werden können."
       default_extends:
         name: "Standard-Presets"
         description: "Presets für alle Repositories, zum Beispiel group:allNonMajor."
@@ -57,7 +60,7 @@ configuration:
         description: "Maximum pro Repository. 0 bedeutet kein Limit. Leer nutzt den Standard von Renovate."
       pr_hourly_limit:
         name: "Neue Pull Requests pro Stunde"
-        description: "Maximum pro Repository. 0 bedeutet kein Limit. Leer nutzt den Standard von Renovate."
+        description: "Maximum pro Repository und Lauf. 0 bedeutet kein Limit. Renovates eigener Standard ist 2; bei einem Lauf alle paar Stunden entstehen dann nur zwei neue Pull Requests pro Repository und Lauf."
       github_com_token:
         name: "Token für github.com"
         description: "Damit liest Renovate Release Notes und Changelogs von GitHub ohne Rate-Limit. Ein Token ohne Berechtigungen genügt."
@@ -80,6 +83,31 @@ configuration:
       config_file:
         name: "Konfigurationsdatei im App-Ordner"
         description: "Eine JSON-Datei mit Renovate-Optionen im Konfigurationsordner der App (addon_configs). Wird über die obigen Standardwerte gelegt."
+  updates:
+    name: "Updates und Zusammenführen"
+    description: "Was mit jeder Art von Update passiert: ein Pull Request zum Selbst-Mergen, ein automatischer Merge, erst eine Rückfrage oder nichts. Gilt für alle Repositories; ein Repository kann in seiner eigenen renovate.json Ausnahmen machen."
+    fields:
+      major:
+        name: "Major-Updates"
+        description: "Neue Versionen, die etwas kaputt machen können, zum Beispiel 1.x auf 2.x."
+      minor:
+        name: "Minor-Updates"
+        description: "Neue Funktionen, die kompatibel bleiben sollten, zum Beispiel 1.1 auf 1.2."
+      patch:
+        name: "Patch-Updates"
+        description: "Fehlerbehebungen und kleine Änderungen, zum Beispiel 1.1.1 auf 1.1.2. Digests und Pins folgen dieser Einstellung."
+      group_non_major:
+        name: "Ein Pull Request für Minor und Patch"
+        description: "Fasst alle Minor- und Patch-Updates eines Repositorys in einem einzigen Pull Request zusammen. Passt am besten, wenn beide dieselbe Aktion haben."
+      minimum_age_days:
+        name: "Wartezeit nach Release (Tage)"
+        description: "Eine Version wird erst angeboten, wenn sie so lange draußen ist. So fallen kaputte Releases zuerst anderen auf. 0 schaltet die Wartezeit aus."
+      merge_method:
+        name: "Merge-Methode"
+        description: "Wie automatische Merges durchgeführt werden. Automatisch nutzt, was das Repository erlaubt."
+      dashboard:
+        name: "Dependency Dashboard"
+        description: "Ein Issue pro Repository, das alle offenen Updates auflistet. Leer überlässt es dem Repository. Es ist immer an, solange eine Aktion auf \"Erst fragen\" steht."
   history:
     name: "Verlauf"
     description: "Wie lange Läufe und ihre Protokolle aufbewahrt werden."
