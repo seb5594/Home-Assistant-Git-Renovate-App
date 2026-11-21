@@ -38,7 +38,7 @@ Für GitHub und GitLab öffnet der Assistent die Token-Seite mit bereits ausgef�
 
 | Server | Berechtigungen des Tokens |
 | --- | --- |
-| GitHub | `repo` und `workflow` (klassisch) oder Contents, Pull requests, Issues und Workflows mit Schreibzugriff (feingranular) |
+| GitHub | `repo` und `workflow` (klassisch) oder, feingranular: Contents, Pull requests, Issues, Workflows, Commit statuses und Checks mit Lese- und Schreibzugriff, Metadata mit Lesezugriff |
 | GitLab | `api` und `write_repository` |
 | Gitea, Forgejo | `write:repository`, `write:issue`, `read:user`, `read:organization`, `read:misc` (`read:misc` brauchen nur Gitea 1.20.0 und 1.20.1). Ergänze `read:packages`, wenn du Gitea-Pakete nutzt. |
 
@@ -87,6 +87,65 @@ Jede Verbindung hat einen **Modus**:
 - **Automatisch**: Jedes Repository, auf das das Konto pushen darf, wird verarbeitet, auch neue. Mit *Einschluss-* und *Ausschluss-Mustern* (`my-org/*`, `**/archive-*`) grenzt du das ein. Forks und archivierte Repositories werden übersprungen, solange du das nicht änderst.
 
 Ein Schalter in der Repository-Liste gewinnt immer gegen die Regeln. Die Liste wird vor jedem automatischen Lauf und mit **Liste aktualisieren** erneuert.
+
+## Updates: was automatisch gemergt wird
+
+Jedes Update hat eine Art: **Major** (1.x auf 2.x), **Minor** (1.1 auf 1.2) oder **Patch** (1.1.1 auf 1.1.2). Digests und Pins folgen der Patch-Einstellung. Unter *Einstellungen → Updates und Zusammenführen* wählst du für jede Art eine dieser Aktionen:
+
+| Aktion | Was passiert |
+| --- | --- |
+| Wie es das Repository festlegt (Standard) | Die App fügt nichts hinzu. Die eigene `renovate.json` des Repositorys gilt, bestehende Setups laufen also weiter. |
+| Pull Request, ich merge | Ein Pull Request wird angelegt. Renovate mergt ihn nie. |
+| Erst fragen | Das Update steht nur im *Dependency-Dashboard*-Issue des Repositorys und bekommt seinen Pull Request, wenn du es anhakst. |
+| Automatisch mergen | Ein Pull Request wird angelegt und gemergt, sobald seine Prüfungen grün sind. |
+| Überspringen | Das Update wird gar nicht angeboten. |
+
+Vier **Rezepte** füllen die Optionen mit einem Klick aus (unter *Einstellungen → Updates und Zusammenführen* und in der Anleitung der Weboberfläche):
+
+| Rezept | Major | Minor und Patch | Außerdem |
+| --- | --- | --- | --- |
+| Vorsichtig | Pull Request | Pull Request | |
+| Ausgewogen (empfohlen) | Pull Request | automatisch gemergt | ein Release muss 3 Tage alt sein |
+| Ruhig | erst fragen | automatisch gemergt, ein Pull Request für alle | ein Release muss 3 Tage alt sein |
+| Hände weg | automatisch gemergt | automatisch gemergt | ein Release muss 3 Tage alt sein |
+
+„Ausgewogen" ist die Antwort auf „alles außer Major-Updates selbst mergen". Hinweise:
+
+- Renovate mergt nur, wenn die Prüfungen des Pull Requests grün sind. Ein Repository ganz ohne Prüfungen hat nichts, was ein schlechtes Update aufhalten kann; sei dort vorsichtig und schütze den Standard-Branch.
+- Die Einstellungen der App sind Paketregeln. Ein Repository kann trotzdem Ausnahmen mit eigenen `packageRules` in seiner `renovate.json` machen; Regeln dort gehen vor. Ein einfaches `"automerge": false` auf oberster Ebene eines Repositorys gewinnt **nicht** gegen eine Regel der App, weil Paketregeln darüber angewendet werden.
+- *Wartezeit nach Release* hält Versionen zurück, die jünger sind als die angegebenen Tage. Versionen ohne Veröffentlichungsdatum werden nicht zurückgehalten.
+
+Ein Beispiel für eine Ausnahme in einem Repository:
+
+```json
+{
+  "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+  "extends": ["config:recommended"],
+  "packageRules": [
+    { "matchPackageNames": ["react"], "matchUpdateTypes": ["major"], "enabled": false },
+    { "matchManagers": ["github-actions"], "automerge": true }
+  ]
+}
+```
+
+## Ein eigenes Konto für Commits, Issues und Pull Requests
+
+Alles, was Renovate tut, geschieht als das Konto hinter dem Token: Pull Requests, Issues, Kommentare und Commits. Gib ihm ein eigenes Konto, zum Beispiel `renovate-bot`:
+
+1. Lege das Konto auf deinem Git-Server an (GitHub: ein normales kostenloses Konto; GitLab, Gitea, Forgejo: ein gewöhnlicher Benutzer).
+2. Gib ihm Zugriff: füge es als Mitarbeiter mit Schreibrecht hinzu, oder über ein Team mit Schreibrecht zu einer Organisation.
+3. Melde dich als dieses Konto an, erstelle das Token (siehe [Token](#token)) und nutze es für die Verbindung. Nicht dein eigenes Token.
+4. Optional, nur für den Autor der Commits: *Einstellungen → Renovate → Commit-Autor*, zum Beispiel `Renovate Bot <renovate-bot@example.org>`. Leer verwendet Renovate Name und Adresse des Kontos. Damit GitHub bei den Commits das Bild des Kontos zeigt, nutze dessen No-Reply-Adresse `ID+BENUTZER@users.noreply.github.com` (die ID steht unter `https://api.github.com/users/BENUTZER`).
+
+Pull Requests und Issues tragen immer den Namen des Kontos hinter dem Token. Die Einstellung für den Commit-Autor ändert nur die Commits. Eine GitHub App wird nicht unterstützt: die App arbeitet mit Tokens.
+
+## Wechsel von der Mend-Renovate-App
+
+Die kostenlose Cloud-App von Mend und diese App nutzen dasselbe Renovate. Deine `renovate.json` (auch `.github/renovate.json`) funktioniert unverändert weiter. Drei Dinge solltest du wissen:
+
+- **Deinstalliere die Mend-App** von den Repositories oder der Organisation. Sonst arbeiten zwei Bots an denselben Branches.
+- **Alte Pull Requests wirken „bearbeitet".** Ihre Commits haben einen anderen Autor als das neue Konto, und Renovate lässt Branches in Ruhe, die jemand anderes geändert hat. Die App ignoriert deshalb standardmäßig die Commits des Mend-Bots (*Einstellungen → Renovate → Ignorierte Commit-Autoren*, `29139614+renovate[bot]@users.noreply.github.com`). Steht ein Branch im Dependency Dashboard trotzdem als *Edited/Blocked*, hake sein Rebase-Kästchen an, oder schließe den Pull Request und lösche den Branch.
+- Repositories, die schon eine Konfiguration haben, bekommen keinen Onboarding-Pull-Request mehr.
 
 ## Zeitplan und Läufe
 
@@ -176,13 +235,28 @@ Standardwerte für alle Repositories. Eine renovate.json im Repository kann die 
 | `renovate.onboarding_preset`<br>**Onboarding-Preset** | Das Preset, das in den Onboarding-Pull-Request geschrieben wird. | `config:recommended` |
 | `renovate.require_config`<br>**Konfigurationsdatei** | Erforderlich: nur Repositories mit Konfiguration werden verarbeitet. Optional: Repositories ohne Konfiguration laufen mit Standardwerten. Ignoriert: Dateien im Repository werden nicht gelesen. | `required` |
 | `renovate.git_author`<br>**Commit-Autor** | Name und Adresse der Commits, als Name <Adresse>. Leer nutzt den Standard von Renovate. | automatisch |
+| `renovate.ignored_authors`<br>**Ignorierte Commit-Autoren** | Commits dieser Autoren gelten nicht als manuelle Änderung. Standard ist die Mend-Renovate-App, damit ihre Pull Requests übernommen werden können. | `29139614+renovate[bot]@users.noreply.github.com` |
 | `renovate.default_extends`<br>**Standard-Presets** | Presets für alle Repositories, zum Beispiel group:allNonMajor. | keiner |
 | `renovate.default_labels`<br>**Standard-Labels** | Labels, die jeder Pull Request erhält. | keiner |
 | `renovate.pr_concurrent_limit`<br>**Gleichzeitig offene Pull Requests** | Maximum pro Repository. 0 bedeutet kein Limit. Leer nutzt den Standard von Renovate. | automatisch |
-| `renovate.pr_hourly_limit`<br>**Neue Pull Requests pro Stunde** | Maximum pro Repository. 0 bedeutet kein Limit. Leer nutzt den Standard von Renovate. | automatisch |
+| `renovate.pr_hourly_limit`<br>**Neue Pull Requests pro Stunde** | Maximum pro Repository und Lauf. 0 bedeutet kein Limit. Renovates eigener Standard ist 2; bei einem Lauf alle paar Stunden entstehen dann nur zwei neue Pull Requests pro Repository und Lauf. | `0` |
 | `renovate.github_com_token`<br>**Token für github.com** | Damit liest Renovate Release Notes und Changelogs von GitHub ohne Rate-Limit. Ein Token ohne Berechtigungen genügt. | – |
 | `renovate.host_rules`<br>**Zugangsdaten für Registries** | Anmeldungen für private Paketquellen, zum Beispiel eine Docker-Registry oder einen npm-Proxy. | keiner |
 | `renovate.config_file`<br>**Konfigurationsdatei im App-Ordner** | Eine JSON-Datei mit Renovate-Optionen im Konfigurationsordner der App (addon_configs). Wird über die obigen Standardwerte gelegt. | automatisch |
+
+### Updates und Zusammenführen
+
+Was mit jeder Art von Update passiert: ein Pull Request zum Selbst-Mergen, ein automatischer Merge, erst eine Rückfrage oder nichts. Gilt für alle Repositories; ein Repository kann in seiner eigenen renovate.json Ausnahmen machen.
+
+| Option | Beschreibung | Standard |
+| --- | --- | --- |
+| `updates.major`<br>**Major-Updates** | Neue Versionen, die etwas kaputt machen können, zum Beispiel 1.x auf 2.x. | `repository` |
+| `updates.minor`<br>**Minor-Updates** | Neue Funktionen, die kompatibel bleiben sollten, zum Beispiel 1.1 auf 1.2. | `repository` |
+| `updates.patch`<br>**Patch-Updates** | Fehlerbehebungen und kleine Änderungen, zum Beispiel 1.1.1 auf 1.1.2. Digests und Pins folgen dieser Einstellung. | `repository` |
+| `updates.group_non_major`<br>**Ein Pull Request für Minor und Patch** | Fasst alle Minor- und Patch-Updates eines Repositorys in einem einzigen Pull Request zusammen. Passt am besten, wenn beide dieselbe Aktion haben. | `false` |
+| `updates.minimum_age_days`<br>**Wartezeit nach Release (Tage)** | Eine Version wird erst angeboten, wenn sie so lange draußen ist. So fallen kaputte Releases zuerst anderen auf. 0 schaltet die Wartezeit aus. | `0` |
+| `updates.merge_method`<br>**Merge-Methode** | Wie automatische Merges durchgeführt werden. Automatisch nutzt, was das Repository erlaubt. | `auto` |
+| `updates.dashboard`<br>**Dependency Dashboard** | Ein Issue pro Repository, das alle offenen Updates auflistet. Leer überlässt es dem Repository. Es ist immer an, solange eine Aktion auf "Erst fragen" steht. | automatisch |
 
 ### Verlauf
 
@@ -278,6 +352,17 @@ Für Sonderfälle: Zertifikate, zusätzliche Werkzeuge, Umgebungsvariablen.
 | Renovate ist der Arbeitsspeicher ausgegangen | Nutze das Profil Sparsam, verringere die Durchgangsgröße oder erhöhe den Speicher pro Lauf. |
 | Kein Repository eingeschaltet | Öffne die Verbindung und schalte Repositories ein. |
 | Fertig mit Problemen | Öffne den Lauf und sieh dir die Repositories mit Fehlern an. |
+
+### Issues erscheinen, aber keine Pull Requests
+
+Öffne den letzten Lauf: das gelbe Feld eines Repositorys nennt den Grund. Die üblichen Ursachen, von der wahrscheinlichsten zur unwahrscheinlichsten:
+
+1. **Ein Branch oder Pull Request wurde von jemand anderem geändert**, oder von einem anderen Bot-Konto angelegt (siehe [Wechsel von der Mend-Renovate-App](#wechsel-von-der-mend-renovate-app)).
+2. **Das Token kann keine Pull Requests anlegen.** Issues klappen und Pull Requests schlagen fehl, wenn dem Token die Berechtigung für Pull Requests fehlt (siehe [Token](#token)).
+3. **Eine Aktion wartet auf dich.** *Erst fragen* zeigt das Update nur im Dependency-Dashboard-Issue, bis du es anhakst.
+4. **Probelauf** steht nicht auf *Aus* (*Einstellungen → Renovate*). Renovate schaut dann nur.
+5. **Ein Zeitplan im Repository** (`"schedule"` in dessen `renovate.json`) beschränkt, wann Pull Requests geöffnet werden.
+6. **Limits.** Die Zahl offener Pull Requests (standardmäßig 10 pro Repository) oder die Wartezeit nach einem Release.
 
 Erhöhe den Detailgrad unter *Erweitert → Protokollstufe von Renovate* für einen Lauf auf `debug`, wenn du mehr brauchst. Debug-Protokolle sind groß.
 

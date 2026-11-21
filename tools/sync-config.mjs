@@ -136,7 +136,7 @@ function optionsReference(code) {
   const show = (definition) => {
     if (definition.type === 'secret') return '–';
     if (definition.default === undefined || definition.default === null) return words.automatic;
-    if (Array.isArray(definition.default)) return words.none;
+    if (Array.isArray(definition.default)) return definition.default.length ? definition.default.map((item) => `\`${item}\``).join(', ') : words.none;
     return `\`${definition.default}\``;
   };
   const blocks = [];

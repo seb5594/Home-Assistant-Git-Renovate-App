@@ -1,5 +1,9 @@
 # Changelog
 
+## 2026.11.21
+
+* ✨ New: choose per kind of update (major, minor, patch) whether Renovate opens a pull request, merges it by itself, asks first or skips it, with four ready-made recipes (Settings → Updates and merging). A guide in the web interface explains the account for commits and pull requests, token permissions, moving from the Mend Renovate app and what to do when issues appear but no pull requests. Runs now say why updates were held back. Emojis in the web interface. 🐛 Fixed: pull requests changed by someone else were counted as updated, and the default of Renovate (two new pull requests per hour) held back most updates between runs hours apart; the limit is now off by default. Pull requests of the Mend Renovate app are taken over.
+
 ## 2026.11.20.3
 
 * ✨ New: Bitbucket Cloud, Bitbucket Server, Azure DevOps, Gerrit and SCM-Manager (beta), and sign-in through the browser for Gitea, Forgejo and GitLab (passkey, YubiKey, SSO) with automatic renewal of the short-lived tokens. 🐛 Fixed: the app configuration was ignored because Home Assistant keeps it readable for root only; the server now runs with the container's rights and Renovate as an unprivileged user, and an unreadable configuration is reported. The log time no longer wraps on phones, the webhook port is now 5594, and the groups of the configuration page are in a new order.

@@ -3,6 +3,8 @@
 import { api } from '../api.mjs';
 import { badge, busy, configurationNotice, confirmDialog, notice, reportError, skeleton, switchControl, toast } from '../components.mjs';
 import { h, mount } from '../dom.mjs';
+import { EMOJI, emoji, withEmoji } from '../emoji.mjs';
+import { recipePicker } from '../recipes.mjs';
 import { iconLock, iconPlus, iconRefresh, iconTrash } from '../icons.mjs';
 import { dateTime } from '../format.mjs';
 import { hasText, t } from '../i18n.mjs';
@@ -10,7 +12,12 @@ import { hasText, t } from '../i18n.mjs';
 const SAVE_DELAY_MS = 700;
 
 const label = (key) => t(`settings.${key}.label`);
-const optionLabel = (key, value) => (hasText(`settings.${key}.${value}`) ? t(`settings.${key}.${value}`) : value);
+// Options of one setting have their own text; the actions of the update settings share theirs.
+const optionLabel = (key, value) => {
+  const candidates = [`settings.${key}.${value}`, `settings.${key.split('.')[0]}.action.${value}`];
+  const found = candidates.find(hasText);
+  return found ? t(found) : value;
+};
 
 export async function settingsView(container, context) {
   mount(container, skeleton(3));
@@ -51,7 +58,7 @@ export async function settingsView(container, context) {
         return switchControl({ checked: Boolean(entry.value), disabled, label: label(entry.key), onchange: (checked) => save(entry.key, checked) });
       case 'enum':
         return h('select', { disabled, 'aria-label': label(entry.key), onchange: (event) => save(entry.key, event.target.value) },
-          entry.values.map((value) => h('option', { value, selected: entry.value === value }, optionLabel(entry.key, value))));
+          entry.values.map((value) => h('option', { value, selected: entry.value === value }, withEmoji(EMOJI.action[value] && entry.key.startsWith('updates.') ? EMOJI.action[value] : null, optionLabel(entry.key, value)))));
       case 'int':
         return h('input', { type: 'number', min: entry.min, max: entry.max, value: entry.value ?? '', placeholder: entry.default ?? t('settings.automatic'), disabled, 'aria-label': label(entry.key),
           oninput: (event) => (event.target.value === '' ? later(entry.key, null) : later(entry.key, Number(event.target.value))) });
@@ -117,15 +124,16 @@ export async function settingsView(container, context) {
     const basic = entries.filter((entry) => !entry.advanced);
     const advanced = entries.filter((entry) => entry.advanced);
     return h('section', { class: 'card' },
-      h('div', { class: 'card-head' }, h('h2', {}, t(`settings.group.${name}`))),
+      h('div', { class: 'card-head' }, h('h2', {}, emoji(EMOJI.group[name]), t(`settings.group.${name}`))),
       h('p', { class: 'muted' }, t(`settings.group.${name}.help`)),
       name === 'resources' ? (resourcesBox = resourcesInfo()) : null,
+      name === 'updates' ? recipePicker({ onApplied: async () => { data = await api.get('settings'); paint(); } }) : null,
       basic.map(item),
       advanced.length ? h('details', { class: 'advanced' }, h('summary', {}, t('settings.advanced')), advanced.map(item)) : null);
   }
 
   const configurationCard = () => h('section', { class: 'card stack' },
-    h('h2', {}, t('settings.config.title')),
+    h('h2', {}, emoji('🔄'), t('settings.config.title')),
     h('p', { class: 'muted' }, t('settings.config.text')),
     configurationNotice(configuration),
     h('div', { class: 'row' },
@@ -142,7 +150,7 @@ export async function settingsView(container, context) {
       }) }, iconRefresh(), t('settings.config.reload')),
       configuration.syncedAt ? h('span', { class: 'muted small' }, t('settings.config.synced', { when: dateTime(configuration.syncedAt) })) : null));
 
-  const maintenance = () => h('section', { class: 'card stack' }, h('h2', {}, t('settings.maintenance.title')), h('p', { class: 'muted' }, t('settings.maintenance.text')),
+  const maintenance = () => h('section', { class: 'card stack' }, h('h2', {}, emoji('🧹'), t('settings.maintenance.title')), h('p', { class: 'muted' }, t('settings.maintenance.text')),
     h('div', { class: 'row' },
       h('button', { class: 'btn', type: 'button', onclick: async (event) => busy(event.currentTarget, async () => {
         if (!(await confirmDialog({ title: t('settings.maintenance.clear_cache'), message: t('settings.maintenance.clear_cache_text'), confirmLabel: t('settings.maintenance.clear_cache') }))) return;
@@ -164,7 +172,7 @@ export async function settingsView(container, context) {
 
   function paint() {
     mount(container,
-      h('div', { class: 'page-head' }, h('div', {}, h('h1', {}, t('settings.title')), h('p', {}, t('settings.subtitle')))),
+      h('div', { class: 'page-head' }, h('div', {}, h('h1', {}, emoji(EMOJI.nav.settings), t('settings.title')), h('p', {}, t('settings.subtitle')))),
       notice('info', t('settings.how_it_works')),
       configurationCard(),
       data.groups.map(group), maintenance());

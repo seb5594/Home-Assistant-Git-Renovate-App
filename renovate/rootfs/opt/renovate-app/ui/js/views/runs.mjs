@@ -2,6 +2,7 @@
 import { api } from '../api.mjs';
 import { badge, busy, emptyState, notice, reportError, skeleton, toast } from '../components.mjs';
 import { h, mount } from '../dom.mjs';
+import { EMOJI, emoji } from '../emoji.mjs';
 import { clock, dateTime, duration, number, relativeTime } from '../format.mjs';
 import { iconDownload, iconRefresh, iconStop } from '../icons.mjs';
 import { hasText, t } from '../i18n.mjs';
@@ -34,7 +35,7 @@ export async function runsList(container, { navigate }) {
   }
 
   mount(container,
-    h('div', { class: 'page-head' }, h('div', {}, h('h1', {}, t('runs.title')), h('p', {}, t('runs.subtitle'))),
+    h('div', { class: 'page-head' }, h('div', {}, h('h1', {}, emoji(EMOJI.nav.runs), t('runs.title')), h('p', {}, t('runs.subtitle'))),
       h('select', { 'aria-label': t('runs.filter'), onchange: (event) => { filter = event.target.value; load(); } },
         h('option', { value: '' }, t('runs.all_connections')), connections.map((connection) => h('option', { value: connection.id }, connection.name)))),
     wrap);
@@ -104,13 +105,22 @@ function logViewer(runId, getRun) {
   };
 
   const element = h('section', { class: 'stack' },
-    h('div', { class: 'row' }, h('h2', {}, t('runs.log')), h('span', { class: 'spacer' }),
+    h('div', { class: 'row' }, h('h2', {}, emoji('📜'), t('runs.log')), h('span', { class: 'spacer' }),
       h('select', { 'aria-label': t('runs.log_level'), onchange: (event) => { level = event.target.value; reload(); } },
         levels.map((key) => h('option', { value: key, selected: key === level }, t(`runs.level.${key}`)))),
       h('label', { class: 'check small' }, h('input', { type: 'checkbox', checked: follow, onchange: (event) => { follow = event.target.checked; } }), t('runs.follow')),
       h('button', { class: 'btn small', type: 'button', onclick: download }, iconDownload(), t('runs.download'))),
     view, more);
   return { element, reload, close: () => source?.close(), restream: stream };
+}
+
+/** Explains, in plain words, why updates were found but no pull request was opened or changed. */
+function heldBack(held) {
+  const reasons = Object.entries(held ?? {});
+  if (!reasons.length) return null;
+  return notice('warn', h('strong', {}, t('runs.held_title')),
+    h('ul', {}, reasons.map(([code, count]) => h('li', {}, emoji(EMOJI.branch[code] ?? '•'), t(`runs.why.${code}`, { count })))),
+    h('a', { href: '#/guide' }, t('runs.held_guide')));
 }
 
 function repositoryResult(name, result) {
@@ -122,11 +132,12 @@ function repositoryResult(name, result) {
       result.pending ? badge(t('runs.pending', { count: result.pending })) : null,
       result.errors ? badge(t('runs.errors', { count: result.errors }), 'danger') : result.warnings ? badge(t('runs.warnings', { count: result.warnings }), 'warn') : null),
     h('div', { class: 'stack' },
+      heldBack(result.held),
       result.branches.length ? h('div', { class: 'table-wrap' }, h('table', {}, h('thead', {}, h('tr', {}, h('th', {}, t('runs.col.pr')), h('th', {}, t('runs.col.changes')), h('th', {}, t('runs.col.state')))),
         h('tbody', {}, result.branches.map((branch) => h('tr', {},
           h('td', {}, branch.prNo ? `#${branch.prNo}` : '–', branch.prTitle ? h('div', { class: 'small muted' }, branch.prTitle) : h('div', { class: 'small muted mono' }, branch.name)),
           h('td', {}, branch.upgrades.map((upgrade) => h('div', { class: 'small' }, `${upgrade.depName ?? '?'}: ${upgrade.from ?? '?'} → ${upgrade.to ?? '?'}`))),
-          h('td', {}, branch.result ? t(`runs.branch.${branch.result}`) : '–')))))) : h('p', { class: 'muted' }, t('runs.no_branches')),
+          h('td', {}, branch.result ? [emoji(EMOJI.branch[branch.result] ?? '•'), t(`runs.branch.${branch.result}`)] : '–')))))) : h('p', { class: 'muted' }, t('runs.no_branches')),
       problems ? h('ul', {}, result.problems.map((problem) => h('li', {}, badge(t(`runs.level.${problem.level}`), problem.level === 'error' ? 'danger' : 'warn'), ` ${problem.message}`))) : null));
 }
 
@@ -166,7 +177,7 @@ export async function runDetail(container, { params: [idText], navigate }) {
         [['repositories', totals.repositories], ['prsCreated', totals.prsCreated], ['prsUpdated', totals.prsUpdated], ['pending', totals.pending], ['errors', totals.errors]].map(([key, value]) => h('div', { class: 'tile' }, h('div', { class: 'value' }, number(value)), h('div', { class: 'label' }, t(`runs.tile.${key}`)))),
         h('div', { class: 'tile' }, h('div', { class: 'value' }, duration(run.startedAt, run.finishedAt)), h('div', { class: 'label' }, t('runs.col.duration')))) : null,
       run.summary && Object.keys(run.summary.repositories).length
-        ? h('section', { class: 'stack' }, h('h2', {}, t('runs.repositories')), Object.entries(run.summary.repositories).map(([name, result]) => repositoryResult(name, result)))
+        ? h('section', { class: 'stack' }, h('h2', {}, emoji(EMOJI.tile.repositories), t('runs.repositories')), Object.entries(run.summary.repositories).map(([name, result]) => repositoryResult(name, result)))
         : null);
   }
 

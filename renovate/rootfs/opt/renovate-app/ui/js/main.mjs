@@ -5,9 +5,11 @@ import { h, mount } from './dom.mjs';
 import { renderFooter } from './footer.mjs';
 import { homeAssistantLanguage, applyTheme, watchTheme } from './theme.mjs';
 import { setLanguage, t } from './i18n.mjs';
+import { EMOJI, emoji } from './emoji.mjs';
 import { poll } from './poll.mjs';
 import { badge } from './components.mjs';
 import { connectionDetail, connectionsList } from './views/connections.mjs';
+import { guideView } from './views/guide.mjs';
 import { overview } from './views/overview.mjs';
 import { runDetail, runsList } from './views/runs.mjs';
 import { settingsView } from './views/settings.mjs';
@@ -20,9 +22,10 @@ const ROUTES = [
   { pattern: /^\/connect$/, view: wizard, nav: 'connections' },
   { pattern: /^\/runs$/, view: runsList, nav: 'runs' },
   { pattern: /^\/runs\/(\d+)$/, view: runDetail, nav: 'runs' },
+  { pattern: /^\/guide$/, view: guideView, nav: 'guide' },
   { pattern: /^\/settings$/, view: settingsView, nav: 'settings' },
 ];
-const NAV = ['overview', 'connections', 'runs', 'settings'];
+const NAV = ['overview', 'connections', 'runs', 'guide', 'settings'];
 
 const root = document.getElementById('app');
 let boot;
@@ -43,7 +46,7 @@ async function loadBoot() {
 
 function renderShell() {
   const nav = h('nav', { class: 'nav', aria: { label: t('nav.label') } },
-    NAV.map((key) => h('a', { href: key === 'overview' ? '#/' : `#/${key}`, dataset: { nav: key } }, t(`nav.${key}`))));
+    NAV.map((key) => h('a', { href: key === 'overview' ? '#/' : `#/${key}`, dataset: { nav: key } }, emoji(EMOJI.nav[key]), t(`nav.${key}`))));
   const chip = h('div', { class: 'status-chip', id: 'status-chip' });
   const main = h('main', { id: 'view', tabindex: '-1' });
   mount(root,
@@ -61,7 +64,7 @@ async function refreshChip() {
   const running = status.running.length;
   const state = running
     ? badge(t('chip.running', { count: running }), 'accent', { running: true })
-    : status.queued ? badge(t('chip.queued', { count: status.queued }), '') : badge(t('chip.idle'), 'ok');
+    : status.queued ? badge(`⏳ ${t('chip.queued', { count: status.queued })}`, '') : badge(`💤 ${t('chip.idle')}`, 'ok');
   const restart = status.configuration?.restartRequired ? badge(t('chip.restart'), 'warn') : null;
   restart?.setAttribute('title', t('chip.restart_hint'));
   mount(chip, h('span', { class: 'row' }, restart, state));

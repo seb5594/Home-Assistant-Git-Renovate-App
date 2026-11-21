@@ -2,6 +2,7 @@
 import { api } from '../api.mjs';
 import { badge, busy, errorText, notice, reportError, toast } from '../components.mjs';
 import { h, mount } from '../dom.mjs';
+import { EMOJI, emoji } from '../emoji.mjs';
 import { iconExternal, iconPlay } from '../icons.mjs';
 import { t } from '../i18n.mjs';
 import { providerName } from '../status.mjs';
@@ -22,7 +23,7 @@ export async function wizard(container, { boot, navigate }) {
 
   function frame(...content) {
     mount(container,
-      h('div', { class: 'page-head' }, h('div', {}, h('h1', {}, t('wizard.title')), h('p', {}, t('wizard.subtitle'))),
+      h('div', { class: 'page-head' }, h('div', {}, h('h1', {}, emoji('➕'), t('wizard.title')), h('p', {}, t('wizard.subtitle'))),
         h('button', { class: 'btn ghost', type: 'button', onclick: () => navigate(state.connection ? `/connections/${state.connection.id}` : '/') }, t('common.cancel'))),
       h('ol', { class: 'stepper', 'aria-label': t('wizard.steps') }, STEPS.map((key, index) => h('li', { class: index < state.step ? 'done' : '', ...(index === state.step ? { 'aria-current': 'step' } : {}) }, t(`wizard.step.${key}`)))),
       ...content);
@@ -32,7 +33,7 @@ export async function wizard(container, { boot, navigate }) {
   function chooseServer() {
     state.step = 0;
     frame(h('div', { class: 'provider-grid' }, boot.providers.map((provider) => h('button', { class: 'provider-card', type: 'button', onclick: () => select(provider.id) },
-      h('strong', {}, provider.label), h('span', { class: 'muted small' }, t(`wizard.provider.${provider.id}`)),
+      h('strong', {}, emoji(EMOJI.provider[provider.id] ?? '🗂️'), provider.label), h('span', { class: 'muted small' }, t(`wizard.provider.${provider.id}`)),
       h('div', { class: 'row' },
         provider.deviceFlow ? badge(t('wizard.badge.code'), 'accent') : null,
         provider.credentialLogin ? badge(t('wizard.badge.password'), 'accent') : null,

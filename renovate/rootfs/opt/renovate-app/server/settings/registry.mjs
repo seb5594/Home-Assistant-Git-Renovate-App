@@ -28,7 +28,10 @@ export const RESERVED_ENV = /^(RENOVATE_(TOKEN|USERNAME|PASSWORD|PLATFORM|ENDPOI
 
 // The order of the groups is the order on the configuration page of Home Assistant and in the web interface.
 // The list of connections (defined in tools/sync-config.mjs) always comes first.
-export const GROUPS = ['renovate', 'history', 'resources', 'schedule', 'webhooks', 'home_assistant', 'general', 'advanced'];
+export const GROUPS = ['renovate', 'updates', 'history', 'resources', 'schedule', 'webhooks', 'home_assistant', 'general', 'advanced'];
+
+// The things that can happen to an update, from "leave it to the repository" to "merge it yourself".
+export const UPDATE_ACTIONS = ['repository', 'pr', 'approval', 'automerge', 'ignore'];
 
 /** @type {Array<Record<string, any>>} */
 export const DEFINITIONS = [
@@ -64,10 +67,11 @@ export const DEFINITIONS = [
   { key: 'renovate.onboarding_preset', type: 'string', default: 'config:recommended', pattern: /^[^\s]+$/, patternHint: 'config:recommended', scope: 'next-run' },
   { key: 'renovate.require_config', type: 'enum', values: ['required', 'optional', 'ignored'], default: 'required', scope: 'next-run' },
   { key: 'renovate.git_author', type: 'string', pattern: /^[^<>]+ <[^<>@\s]+@[^<>\s]+>$/, patternHint: 'Renovate Bot <renovate@example.com>', scope: 'next-run' },
+  { key: 'renovate.ignored_authors', type: 'list', default: ['29139614+renovate[bot]@users.noreply.github.com'], itemPattern: /^[^\s]+$/, scope: 'next-run', advanced: true },
   { key: 'renovate.default_extends', type: 'list', default: [], itemPattern: /^[^\s]+$/, scope: 'next-run' },
   { key: 'renovate.default_labels', type: 'list', default: [], itemPattern: /^[^\n]{1,50}$/, scope: 'next-run' },
   { key: 'renovate.pr_concurrent_limit', type: 'int', min: 0, max: 100, scope: 'next-run' },
-  { key: 'renovate.pr_hourly_limit', type: 'int', min: 0, max: 100, scope: 'next-run' },
+  { key: 'renovate.pr_hourly_limit', type: 'int', min: 0, max: 100, default: 0, scope: 'next-run' },
   { key: 'renovate.github_com_token', type: 'secret', scope: 'next-run' },
   {
     key: 'renovate.host_rules',
@@ -82,6 +86,17 @@ export const DEFINITIONS = [
     scope: 'next-run',
   },
   { key: 'renovate.config_file', type: 'string', pattern: /^[A-Za-z0-9._-][A-Za-z0-9._/-]*\.json$/, patternHint: 'renovate.json', scope: 'next-run', advanced: true },
+
+  // --- updates ---------------------------------------------------------------------------------
+  // What happens to an update of each kind. "repository" leaves the decision to the repository's own
+  // configuration; every other value is turned into a package rule (see runs/update-rules.mjs).
+  { key: 'updates.major', type: 'enum', values: UPDATE_ACTIONS, default: 'repository', scope: 'next-run' },
+  { key: 'updates.minor', type: 'enum', values: UPDATE_ACTIONS, default: 'repository', scope: 'next-run' },
+  { key: 'updates.patch', type: 'enum', values: UPDATE_ACTIONS, default: 'repository', scope: 'next-run' },
+  { key: 'updates.group_non_major', type: 'bool', default: false, scope: 'next-run' },
+  { key: 'updates.minimum_age_days', type: 'int', min: 0, max: 90, default: 0, scope: 'next-run' },
+  { key: 'updates.merge_method', type: 'enum', values: ['auto', 'squash', 'rebase', 'merge'], default: 'auto', scope: 'next-run', advanced: true },
+  { key: 'updates.dashboard', type: 'bool', scope: 'next-run', advanced: true },
 
   // --- webhooks --------------------------------------------------------------------------------
   { key: 'webhooks.enabled', type: 'bool', default: false, scope: 'live' },

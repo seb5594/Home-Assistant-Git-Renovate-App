@@ -1,5 +1,5 @@
 name: Renovate
-version: "2026.11.20.3"
+version: "2026.11.21"
 slug: renovate
 description: Keeps the dependencies of your GitHub, GitLab and Gitea repositories up to date, with a web interface inside Home Assistant.
 url: https://github.com/seb5594/Home-Assistant-Renovate-App
@@ -36,9 +36,11 @@ backup_exclude:
 options:
   connections: []
   renovate:
+    ignored_authors: []
     default_extends: []
     default_labels: []
     host_rules: []
+  updates: {}
   history: {}
   resources: {}
   schedule: {}
@@ -64,6 +66,8 @@ schema:
     onboarding_preset: str?
     require_config: list(required|optional|ignored)?
     git_author: str?
+    ignored_authors:
+      - str
     default_extends:
       - str
     default_labels:
@@ -77,6 +81,14 @@ schema:
         password: password?
         token: password?
     config_file: str?
+  updates:
+    major: list(repository|pr|approval|automerge|ignore)?
+    minor: list(repository|pr|approval|automerge|ignore)?
+    patch: list(repository|pr|approval|automerge|ignore)?
+    group_non_major: bool?
+    minimum_age_days: int(0,90)?
+    merge_method: list(auto|squash|rebase|merge)?
+    dashboard: bool?
   history:
     keep_runs: int(10,5000)?
     keep_log_days: int(1,365)?

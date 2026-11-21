@@ -5,6 +5,7 @@ import { h, mount } from '../dom.mjs';
 import { dateTime, relativeTime } from '../format.mjs';
 import { iconCopy, iconPlay, iconPlus, iconRefresh } from '../icons.mjs';
 import { t } from '../i18n.mjs';
+import { EMOJI, emoji } from '../emoji.mjs';
 import { providerName } from '../status.mjs';
 
 export async function connectionsList(container, { navigate }) {
@@ -13,7 +14,7 @@ export async function connectionsList(container, { navigate }) {
   mount(container,
     configurationNotice(status.configuration),
     h('div', { class: 'page-head' },
-      h('div', {}, h('h1', {}, t('connections.title')), h('p', {}, t('connections.subtitle'))),
+      h('div', {}, h('h1', {}, emoji(EMOJI.nav.connections), t('connections.title')), h('p', {}, t('connections.subtitle'))),
       h('button', { class: 'btn primary', type: 'button', onclick: () => navigate('/connect') }, iconPlus(), t('connections.add'))),
     connections.length
       ? h('div', { class: 'grid' }, connections.map((connection) => h('a', { class: 'card card-link stack', href: `#/connections/${connection.id}` },

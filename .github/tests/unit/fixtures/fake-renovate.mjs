@@ -33,6 +33,12 @@ if (mode === 'sleep') {
       branches: [{ branchName: 'renovate/left-pad-1.x', prNo: 4, prTitle: 'Update dependency left-pad to v1.3.0', result: 'pr-created', upgrades: [{ depName: 'left-pad', currentVersion: '1.0.0', newVersion: '1.3.0', updateType: 'minor' }] }],
       packageFiles: { npm: [{ deps: [{ depName: 'left-pad', updates: [{ newVersion: '1.3.0' }] }, { depName: 'x' }] }] },
     };
+    // "held": updates were found, but nobody may touch them (edited by another bot, waiting for approval).
+    if (mode === 'held') {
+      report.repositories[repository].branches.push(
+        { branchName: 'renovate/react-19.x', prNo: 7, prTitle: 'Update dependency react to v19', result: 'pr-edited', upgrades: [{ depName: 'react', currentVersion: '18.3.1', newVersion: '19.0.0', updateType: 'major' }] },
+        { branchName: 'renovate/vite-6.x', result: 'needs-approval', upgrades: [{ depName: 'vite', currentVersion: '5.4.0', newVersion: '6.0.0', updateType: 'major' }] });
+    }
     log(30, 'Repository finished', { repository });
   }
   writeFileSync(config.reportPath, JSON.stringify(report));
