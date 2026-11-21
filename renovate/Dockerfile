@@ -7,7 +7,7 @@ ARG BUILD_FROM=ghcr.io/seb5594/home-assistant-base:3.24-2026.11.0
 # this line, the app version and the changelog by itself. The package is installed from npm below, because the
 # official image is built for glibc and this base image uses musl.
 # renovate: datasource=docker depName=ghcr.io/renovatebot/renovate
-ARG RENOVATE_VERSION=44.257.8
+ARG RENOVATE_VERSION=44.257.9
 
 FROM ${BUILD_FROM} AS engine
 
