@@ -6,7 +6,6 @@ import { readFileSync, watch } from 'node:fs';
 import http from 'node:http';
 import os from 'node:os';
 import { nowIso, openDatabase } from './db/database.mjs';
-import { reconcileManagedConnections, specsFromOptions } from './domain/managed.mjs';
 import { createConnections } from './domain/connections.mjs';
 import { createPendingStore } from './domain/pending.mjs';
 import { createHomeAssistant } from './ha/client.mjs';
@@ -120,13 +119,7 @@ export async function createApp({ paths, options = undefined, databaseFile = pat
   const webhookServer = createWebhookServer({ intake, settings });
 
   async function applyConfiguration() {
-    const { specs, problems } = specsFromOptions(currentOptions);
-    const results = await reconcileManagedConnections({ db, vault, connections, specs });
-    configuration.problems = [
-      ...(optionsReadError ? [{ name: 'options.json', message: optionsReadError }] : []),
-      ...problems,
-      ...results.filter((result) => !result.ok).map(({ name, message }) => ({ name, message })),
-    ];
+    configuration.problems = optionsReadError ? [{ name: 'options.json', message: optionsReadError }] : [];
     configuration.restartRequired = restartSnapshot() !== startupSnapshot;
     configuration.syncedAt = nowIso();
     publisher.refresh();

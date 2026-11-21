@@ -147,6 +147,41 @@ The free cloud app of Mend and this app use the same Renovate. Your `renovate.js
 - **Old pull requests look "edited".** Their commits have another author than the new account, and Renovate leaves branches alone that someone else has changed. The app therefore ignores the commits of the Mend bot by default (*Settings → Renovate → Ignored commit authors*, `29139614+renovate[bot]@users.noreply.github.com`). If a branch is still marked *Edited/Blocked* in the Dependency Dashboard, tick its rebase box, or close the pull request and delete the branch.
 - Repositories that already have a configuration get no onboarding pull request again.
 
+## One setup for many repositories
+
+With many repositories you do not want to repeat yourself. Three layers each have their own job, and the lower one wins:
+
+| Layer | Job | Where |
+| --- | --- | --- |
+| The app | **Who and how much**: commit author, labels, update actions and recipes, limits, onboarding, registry tokens, when Renovate runs | *Settings*, applies to every repository |
+| A shared preset | **What is updated and how**: package rules, grouping, version rules, custom managers that all repositories share | One repository, for example `owner/renovate-config` with a `default.json`, named under *Settings → Renovate → Default presets* as `github>owner/renovate-config` (`local>owner/renovate-config` on your own server) |
+| The repository | **Only the exceptions** of that project | `.github/renovate.json`, can be nearly empty |
+
+A repository that uses the shared preset needs only this:
+
+```json
+{
+  "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+  "extends": ["github>owner/renovate-config"]
+}
+```
+
+The alternative is a full copy of the shared file in every repository, kept in step by a script. That also works when the preset repository is private (Renovate does not load a preset from a private repository into a public one), but every change has to reach every repository.
+
+**Recommended settings** for a setup like this:
+
+| Setting | Recommendation | Why |
+| --- | --- | --- |
+| Configuration file | `required` | Only repositories that carry a Renovate file are touched. Switch the onboarding pull request off if all of them have one. |
+| Commit author and account | A dedicated account, for example `Renovate Bot <renovate-bot@example.org>` | A clean history, see [above](#your-own-account-for-commits-issues-and-pull-requests) |
+| Update actions | Recipe *Balanced* | Small updates merge by themselves, major updates wait for you |
+| Open pull requests at once | 6 to 10 | Keeps the review queue short |
+| New pull requests per hour | 0 (no limit) | The runs are hours apart anyway |
+| Default labels | `dependencies` | One label for every pull request |
+| Token for github.com | A token without scopes | Release notes in the pull requests, no rate limits, also for repositories on other servers |
+
+**The schedule.** There are two, and they do different things. The schedule of the app (*Settings → Schedule*) decides when Renovate **looks**. A `schedule` in a repository's file (for example `"before 6am on monday"`) decides when Renovate may **open pull requests**. A run outside that window only updates the Dependency Dashboard issue, which looks exactly like "issues, but no pull requests". Either leave the repository schedule out and let the app decide, or run the app inside the window, for example `0 4 * * 1` (Monday, 04:00 in the time zone set under *Appearance → Time zone*).
+
 ## Schedule and runs
 
 By default Renovate runs every six hours (`0 */6 * * *`). Choose a cron schedule, a fixed interval or manual runs only. Runs for different connections can overlap only if the resource profile allows parallel runs; two runs for the same connection never do.
@@ -198,31 +233,9 @@ If a run ends with *Renovate ran out of memory*, choose the Light profile or rai
 
 Everything can be set in the web interface. Values written in the **app configuration** (Settings → Apps → Renovate → Configuration) win and show a lock in the interface. Use the configuration when you want your setup described in one place, and the interface for everything else.
 
-**Changes in the configuration apply within seconds, without a restart.** Home Assistant writes the saved configuration to the app, which notices it, applies the new values and updates its connections. Only *Extra system packages* and *CA certificate* are read when the app starts; the interface then shows **Restart needed**. If an entry cannot be applied (a rejected token, a missing field), the Overview and Connections pages say which one and why, and **Settings → App configuration → Compare now** checks again at any time.
+**Changes in the configuration apply within seconds, without a restart.** Home Assistant writes the saved configuration to the app, which notices it, applies the new values. Only *Extra system packages* and *CA certificate* are read when the app starts; the interface then shows **Restart needed**. If the configuration cannot be read or an entry is not valid, the pages of the interface say so, and **Settings → App configuration → Compare now** checks again at any time.
 
-### Connections in the configuration
-
-```yaml
-connections:
-  - name: Home Gitea
-    provider: gitea
-    url: http://db21ed7f-gitea:3000
-    token: !secret renovate_gitea_token
-    repositories: sven/home-assistant-config, sven/esphome-devices
-  - name: GitHub
-    provider: github
-    token: !secret renovate_github_token
-    include: my-org/*
-    exclude: my-org/archive-*
-  - name: Bitbucket
-    provider: bitbucket
-    username: sven
-    token: !secret renovate_bitbucket_token
-```
-
-`provider` is one of `github`, `gitlab`, `gitea`, `forgejo`, `bitbucket`, `bitbucket-server`, `azure`, `gerrit` or `scm-manager`. `username` is only used by `bitbucket` and `gerrit`. Connections from the configuration use a token; the browser sign-in is a feature of the assistant.
-
-Connections defined here are created, updated and removed at every start and are read-only in the interface. With `repositories` only those are switched on; without, every repository the account can push to is processed, narrowed by `include` and `exclude`.
+Connections are created in the web interface (the setup assistant), not in the app configuration: a git server needs a sign-in, and the assistant is the place that can check it and tell you what is wrong.
 
 ### Your own Renovate options
 

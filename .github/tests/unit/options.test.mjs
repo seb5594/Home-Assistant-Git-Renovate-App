@@ -74,7 +74,7 @@ test('a new app configuration replaces the old one live, and settings that are n
   assert.equal(seen.length, 2, 'listeners are told after every reload');
 });
 
-test('config.yaml offers exactly the options the registry knows (and the connections list)', (t) => {
+test('config.yaml offers exactly the options the registry knows', (t) => {
   const file = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../../renovate/config.yaml');
   if (!existsSync(file)) return t.skip('config.yaml is not part of the image');
   const schema = readFileSync(file, 'utf8').split('schema:\n')[1];
@@ -84,7 +84,7 @@ test('config.yaml offers exactly the options the registry knows (and the connect
     const top = /^ {2}(\w+):\s*$/.exec(line);
     const key = /^ {4}(\w+):/.exec(line);
     if (top) group = top[1];
-    else if (key && group && group !== 'connections') offered.push(`${group}.${key[1]}`);
+    else if (key && group) offered.push(`${group}.${key[1]}`);
   }
   assert.deepEqual(offered.sort(), DEFINITIONS.map((definition) => definition.key).sort());
 });

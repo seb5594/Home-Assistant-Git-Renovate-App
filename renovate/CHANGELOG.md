@@ -1,5 +1,9 @@
 # Changelog
 
+## 2026.11.21.1
+
+* 🗑️ Removed: the "Connections" list of the app configuration. Connections are created in the web interface; connections that came from the list stay as ordinary ones. ✨ New: a guide section and documentation for one setup for many repositories (shared preset, recommended settings) and an explanation why a schedule in a repository (for example before 6am on monday) shows issues but no pull requests.
+
 ## 2026.11.21
 
 * ✨ New: choose per kind of update (major, minor, patch) whether Renovate opens a pull request, merges it by itself, asks first or skips it, with four ready-made recipes (Settings → Updates and merging). A guide in the web interface explains the account for commits and pull requests, token permissions, moving from the Mend Renovate app and what to do when issues appear but no pull requests. Runs now say why updates were held back. Emojis in the web interface. 🐛 Fixed: pull requests changed by someone else were counted as updated, and the default of Renovate (two new pull requests per hour) held back most updates between runs hours apart; the limit is now off by default. Pull requests of the Mend Renovate app are taken over.

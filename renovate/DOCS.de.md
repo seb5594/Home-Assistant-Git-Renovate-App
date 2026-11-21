@@ -147,6 +147,41 @@ Die kostenlose Cloud-App von Mend und diese App nutzen dasselbe Renovate. Deine 
 - **Alte Pull Requests wirken „bearbeitet".** Ihre Commits haben einen anderen Autor als das neue Konto, und Renovate lässt Branches in Ruhe, die jemand anderes geändert hat. Die App ignoriert deshalb standardmäßig die Commits des Mend-Bots (*Einstellungen → Renovate → Ignorierte Commit-Autoren*, `29139614+renovate[bot]@users.noreply.github.com`). Steht ein Branch im Dependency Dashboard trotzdem als *Edited/Blocked*, hake sein Rebase-Kästchen an, oder schließe den Pull Request und lösche den Branch.
 - Repositories, die schon eine Konfiguration haben, bekommen keinen Onboarding-Pull-Request mehr.
 
+## Ein Setup für viele Repositories
+
+Bei vielen Repositories willst du dich nicht wiederholen. Drei Ebenen haben jeweils ihre eigene Aufgabe, und die untere gewinnt:
+
+| Ebene | Aufgabe | Wo |
+| --- | --- | --- |
+| Die App | **Wer und wie viel**: Commit-Autor, Labels, Update-Aktionen und Rezepte, Limits, Onboarding, Registry-Tokens, wann Renovate läuft | *Einstellungen*, gilt für jedes Repository |
+| Ein gemeinsames Preset | **Was aktualisiert wird und wie**: Paketregeln, Gruppierung, Versionsregeln, eigene Manager, die alle Repositories teilen | Ein Repository, zum Beispiel `owner/renovate-config` mit einer `default.json`, unter *Einstellungen → Renovate → Standard-Presets* als `github>owner/renovate-config` eingetragen (`local>owner/renovate-config` auf deinem eigenen Server) |
+| Das Repository | **Nur die Ausnahmen** dieses Projekts | `.github/renovate.json`, kann fast leer sein |
+
+Ein Repository, das das gemeinsame Preset nutzt, braucht nur das:
+
+```json
+{
+  "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+  "extends": ["github>owner/renovate-config"]
+}
+```
+
+Die Alternative ist eine vollständige Kopie der gemeinsamen Datei in jedem Repository, per Skript synchron gehalten. Das klappt auch, wenn das Preset-Repository privat ist (Renovate lädt kein Preset aus einem privaten Repository in ein öffentliches), aber jede Änderung muss jedes Repository erreichen.
+
+**Empfohlene Einstellungen** für so ein Setup:
+
+| Einstellung | Empfehlung | Warum |
+| --- | --- | --- |
+| Konfigurationsdatei | `Erforderlich` | Nur Repositories mit einer Renovate-Datei werden angefasst. Schalte den Onboarding-Pull-Request aus, wenn alle eine haben. |
+| Commit-Autor und Konto | Ein eigenes Konto, zum Beispiel `Renovate Bot <renovate-bot@example.org>` | Ein sauberer Verlauf, siehe [oben](#ein-eigenes-konto-für-commits-issues-und-pull-requests) |
+| Update-Aktionen | Rezept *Ausgewogen* | Kleine Updates werden von selbst gemergt, Major-Updates warten auf dich |
+| Gleichzeitig offene Pull Requests | 6 bis 10 | Hält die Prüf-Schlange kurz |
+| Neue Pull Requests pro Stunde | 0 (kein Limit) | Die Läufe liegen ohnehin Stunden auseinander |
+| Standard-Labels | `dependencies` | Ein Label für jeden Pull Request |
+| Token für github.com | Ein Token ohne Scopes | Release-Notes in den Pull Requests, keine Rate-Limits, auch für Repositories auf anderen Servern |
+
+**Der Zeitplan.** Es gibt zwei, und sie tun Verschiedenes. Der Zeitplan der App (*Einstellungen → Zeitplan*) bestimmt, wann Renovate **schaut**. Ein `schedule` in der Datei eines Repositorys (zum Beispiel `"before 6am on monday"`) bestimmt, wann Renovate Pull Requests **öffnen darf**. Ein Lauf außerhalb dieses Fensters aktualisiert nur das Dependency-Dashboard-Issue, und das sieht genau aus wie „Issues, aber keine Pull Requests". Lass entweder den Zeitplan im Repository weg und die App entscheiden, oder lass die App innerhalb des Fensters laufen, zum Beispiel `0 4 * * 1` (Montag, 04:00 in der Zeitzone unter *Darstellung → Zeitzone*).
+
 ## Zeitplan und Läufe
 
 Standardmäßig läuft Renovate alle sechs Stunden (`0 */6 * * *`). Wähle einen Cron-Zeitplan, ein festes Intervall oder nur manuelle Läufe. Läufe verschiedener Verbindungen überlappen nur, wenn das Ressourcenprofil parallele Läufe erlaubt; zwei Läufe derselben Verbindung nie.
@@ -185,26 +220,9 @@ Endet ein Lauf mit *Renovate ist der Arbeitsspeicher ausgegangen*, wähle das Pr
 
 Alles lässt sich in der Weboberfläche einstellen. Werte in der **App-Konfiguration** (Einstellungen → Apps → Renovate → Konfiguration) gewinnen und zeigen in der Oberfläche ein Schloss. Nutze die Konfiguration, wenn du dein Setup an einer Stelle beschreiben willst, und die Oberfläche für alles andere.
 
-**Änderungen in der Konfiguration gelten innerhalb von Sekunden, ohne Neustart.** Home Assistant schreibt die gespeicherte Konfiguration in die App, die das bemerkt, die neuen Werte übernimmt und ihre Verbindungen aktualisiert. Nur *Zusätzliche Systempakete* und *CA-Zertifikat* werden beim Start der App gelesen; die Oberfläche zeigt dann **Neustart nötig**. Lässt sich ein Eintrag nicht übernehmen (abgelehntes Token, fehlendes Feld), nennen die Seiten Übersicht und Verbindungen, welcher und warum, und **Einstellungen → App-Konfiguration → Jetzt abgleichen** prüft jederzeit erneut.
+**Änderungen in der Konfiguration gelten innerhalb von Sekunden, ohne Neustart.** Home Assistant schreibt die gespeicherte Konfiguration in die App, die das bemerkt, die neuen Werte übernimmt. Nur *Zusätzliche Systempakete* und *CA-Zertifikat* werden beim Start der App gelesen; die Oberfläche zeigt dann **Neustart nötig**. Lässt sich die Konfiguration nicht lesen oder ist ein Eintrag ungültig, sagen das die Seiten der Oberfläche, und **Einstellungen → App-Konfiguration → Jetzt abgleichen** prüft jederzeit erneut.
 
-### Verbindungen in der Konfiguration
-
-```yaml
-connections:
-  - name: Home Gitea
-    provider: gitea
-    url: http://db21ed7f-gitea:3000
-    token: !secret renovate_gitea_token
-    repositories: sven/home-assistant-config, sven/esphome-devices
-  - name: Bitbucket
-    provider: bitbucket
-    username: sven
-    token: !secret renovate_bitbucket_token
-```
-
-`provider` ist `github`, `gitlab`, `gitea`, `forgejo`, `bitbucket`, `bitbucket-server`, `azure`, `gerrit` oder `scm-manager`. `username` brauchen nur `bitbucket` und `gerrit`. Verbindungen aus der Konfiguration nutzen ein Token; die Browser-Anmeldung ist eine Funktion des Assistenten.
-
-Hier festgelegte Verbindungen werden bei jedem Start angelegt, aktualisiert und entfernt und sind in der Oberfläche schreibgeschützt. Mit `repositories` werden nur diese eingeschaltet; ohne wird jedes Repository verarbeitet, auf das das Konto pushen darf, eingegrenzt durch `include` und `exclude`.
+Verbindungen legst du in der Weboberfläche an (Einrichtungsassistent), nicht in der App-Konfiguration: ein Git-Server braucht eine Anmeldung, und der Assistent kann sie prüfen und sagen, was nicht stimmt.
 
 ### Eigene Renovate-Optionen
 
