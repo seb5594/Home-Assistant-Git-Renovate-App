@@ -1,5 +1,9 @@
 # Changelog
 
+## 2026.11.21.2
+
+* 📦 Update renovatebot/renovate to 44.257.8 (was 44.256.1).
+
 ## 2026.11.21.1
 
 * 🗑️ Removed: the "Connections" list of the app configuration. Connections are created in the web interface; connections that came from the list stay as ordinary ones. ✨ New: a guide section and documentation for one setup for many repositories (shared preset, recommended settings) and an explanation why a schedule in a repository (for example before 6am on monday) shows issues but no pull requests.
