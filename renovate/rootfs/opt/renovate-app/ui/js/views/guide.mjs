@@ -11,6 +11,11 @@ const MINIMAL_CONFIG = `{
   "extends": ["config:recommended"]
 }`;
 
+const PRESET_CONFIG = `{
+  "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+  "extends": ["github>owner/renovate-config"]
+}`;
+
 const EXCEPTION_CONFIG = `{
   "$schema": "https://docs.renovatebot.com/renovate-schema.json",
   "extends": ["config:recommended"],
@@ -20,8 +25,12 @@ const EXCEPTION_CONFIG = `{
   ]
 }`;
 
-/** Text with `code` spans, built as nodes so nothing is ever interpreted as HTML. */
-const rich = (text) => text.split('`').map((part, index) => (index % 2 ? h('code', {}, part) : part));
+/** Text with `code` and **bold** spans, built as nodes so nothing is ever interpreted as HTML. */
+const rich = (text) => text.split(/(`[^`]+`|\*\*[^*]+\*\*)/).filter(Boolean).map((part) => {
+  if (part.startsWith('`')) return h('code', {}, part.slice(1, -1));
+  if (part.startsWith('**')) return h('strong', {}, part.slice(2, -2));
+  return part;
+});
 
 const paragraph = (key, params) => h('p', {}, rich(t(key, params)));
 const list = (tag, keys) => h(tag, { class: 'guide-list' }, keys.map((key) => h('li', {}, rich(t(key)))));
@@ -46,6 +55,10 @@ const SECTIONS = [
     body: () => [paragraph('guide.token.intro'), list('ul', ['guide.token.github', 'guide.token.github_classic', 'guide.token.gitlab', 'guide.token.gitea', 'guide.token.others']), tip('guide.token.symptom')] },
   { id: 'config', symbol: '📄',
     body: () => [paragraph('guide.config.intro'), list('ul', ['guide.config.files', 'guide.config.onboarding', 'guide.config.presets']), codeBlock(MINIMAL_CONFIG), paragraph('guide.config.more')] },
+  { id: 'many', symbol: '🧩',
+    body: () => [paragraph('guide.many.intro'), list('ul', ['guide.many.layer_app', 'guide.many.layer_preset', 'guide.many.layer_repo']), paragraph('guide.many.copy'),
+      paragraph('guide.many.settings_title'), list('ul', ['guide.many.s_config', 'guide.many.s_account', 'guide.many.s_updates', 'guide.many.s_limits', 'guide.many.s_schedule', 'guide.many.s_token']),
+      paragraph('guide.many.example'), codeBlock(PRESET_CONFIG)] },
   { id: 'mend', symbol: '🔁',
     body: () => [paragraph('guide.mend.intro'), list('ul', ['guide.mend.uninstall', 'guide.mend.edited', 'guide.mend.config', 'guide.mend.onboarding'])] },
   { id: 'nothing', symbol: '🕵️',

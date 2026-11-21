@@ -19,7 +19,7 @@ Abhängigkeiten veralten unbemerkt: ein Docker-Tag hier, eine GitHub Action dort
 - **Teil von Home Assistant.** Sensoren (`sensor.renovate_status`, `sensor.renovate_open_pull_requests`, `sensor.renovate_last_run`), ein Ereignis nach jedem Lauf und optionale Fehlerbenachrichtigungen passen in deine Automationen.
 - **Sieht aus, als gehöre sie dazu.** Hell und Dunkel folgen Home Assistant, die Akzentfarbe ist Blau, folgt deinem Home-Assistant-Design oder ist eine Farbe deiner Wahl, und die Oberfläche spricht Deutsch und Englisch.
 - **Transparent.** Jeder Lauf hat ein Live-Protokoll, ein Ergebnis pro Repository (neue Pull Requests, gefundene Updates, Probleme) und Hinweise in einfacher Sprache zu den üblichen Fehlern: abgelaufenes Token, Server nicht erreichbar, Zertifikat, Rate-Limit, zu wenig Speicher.
-- **Bis ins Detail einstellbar.** Jede Einstellung gibt es in der Weboberfläche *und* in der App-Konfiguration; ein Schloss zeigt, was gewinnt. Verbindungen lassen sich allein in der Konfiguration festlegen.
+- **Bis ins Detail einstellbar.** Jede Einstellung gibt es in der Weboberfläche *und* in der App-Konfiguration; ein Schloss zeigt, was gewinnt.
 
 | | | |
 | --- | --- | --- |

@@ -88,7 +88,8 @@ main > * { min-width: 0; }
 .page-head { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px; }
 .page-head p { color: var(--muted); margin-top: 2px; }
 .row { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
-.stack { display: grid; gap: 12px; }
+.stack { display: grid; gap: 12px; grid-template-columns: minmax(0, 1fr); }
+.stack > * { min-width: 0; }
 .grid { display: grid; gap: 16px; grid-template-columns: repeat(auto-fill, minmax(min(280px, 100%), 1fr)); }
 .muted { color: var(--muted); }
 .small { font-size: 0.86rem; }

@@ -45,7 +45,7 @@ Dependencies age quietly: a Docker tag here, a GitHub Action there, a Python pac
 - **Part of Home Assistant.** Sensors (`sensor.renovate_status`, `sensor.renovate_open_pull_requests`, `sensor.renovate_last_run`), an event after every run and optional failure notifications fit into your automations.
 - **Looks like it belongs.** Light and dark mode follow Home Assistant, the accent color is blue, follows your Home Assistant theme or is a color of your choice, and the interface speaks English and German.
 - **Transparent.** Every run has a live log, a result per repository (new pull requests, updates found, problems) and plain-language hints for the usual failures: expired token, unreachable server, certificate, rate limit, too little memory.
-- **Configurable down to the details.** Every setting is in the web interface *and* in the app configuration; a lock shows which one wins. Connections can be defined in the configuration alone.
+- **Configurable down to the details.** Every setting is in the web interface *and* in the app configuration; a lock shows which one wins.
 
 | | | |
 | --- | --- | --- |

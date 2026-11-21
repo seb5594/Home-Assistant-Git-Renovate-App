@@ -19,7 +19,7 @@ export async function connectionsList(container, { navigate }) {
     connections.length
       ? h('div', { class: 'grid' }, connections.map((connection) => h('a', { class: 'card card-link stack', href: `#/connections/${connection.id}` },
         h('div', { class: 'row nowrap' }, avatar(connection), h('div', { class: 'grow' }, h('strong', {}, connection.name), h('div', { class: 'muted small' }, `${providerName(connection.provider)} · ${connection.accountLogin ?? ''}`))),
-        connection.managed || !connection.enabled ? h('div', { class: 'row' }, connection.managed ? badge(t('connections.managed'), 'accent') : null, connection.enabled ? null : badge(t('connections.off'), 'warn')) : null,
+        connection.enabled ? null : h('div', { class: 'row' }, badge(t('connections.off'), 'warn')),
         h('div', { class: 'muted' }, t('connections.repository_summary', { enabled: connection.enabledRepositoryCount, total: connection.repositoryCount })),
         connection.lastSyncError ? badge(t('connections.sync_failed'), 'danger') : null)))
       : emptyState(t('connections.empty.title'), t('connections.empty.text'), h('button', { class: 'btn primary', type: 'button', onclick: () => navigate('/connect') }, iconPlus(), t('connections.add'))));
@@ -126,10 +126,6 @@ export function repositoriesTab(connection, panel) {
 }
 
 function settingsTab(connection, panel, navigate, reload) {
-  if (connection.managed) {
-    mount(panel, notice('info', t('connections.managed_hint')));
-    return;
-  }
   const field = (label, control, hint) => h('label', { class: 'field' }, label, control, hint ? h('span', { class: 'hint' }, hint) : null);
   const name = h('input', { type: 'text', value: connection.name, maxlength: '60' });
   const mode = h('select', {}, ['selected', 'all'].map((key) => h('option', { value: key, selected: connection.mode === key }, t(`connections.mode.${key}`))));
@@ -246,7 +242,6 @@ export async function connectionDetail(container, { boot, params: [id], query, n
         h('div', { class: 'row' }, avatar(connection),
           h('div', {}, h('h1', {}, connection.name), h('p', {}, `${providerName(connection.provider)} · ${connection.accountLogin ?? ''}`, connection.endpoint && connection.provider !== 'github' ? h('span', { class: 'mono small' }, ` · ${connection.endpoint}`) : null))),
         h('div', { class: 'row' },
-          connection.managed ? badge(t('connections.managed'), 'accent') : null,
           connection.lastSyncAt ? h('span', { class: 'muted small' }, t('connections.synced', { when: dateTime(connection.lastSyncAt) })) : null,
           h('button', { class: 'btn primary', type: 'button', disabled: !connection.enabled, onclick: async (event) => busy(event.currentTarget, async () => {
             try {

@@ -140,16 +140,6 @@ test('settings can be read and changed, locked ones are refused, errors are expl
   assert.equal((await call('PUT', '/api/settings', { changes: { 'schedule.interval_minutes': 2 } })).data.error.code, 'invalid_setting');
 });
 
-test('connections defined in the app configuration are created, read-only and removed when they disappear', async (t) => {
-  const { call, app } = await startApp(t, { options: { connections: [{ name: 'From options', provider: 'gitea', url: 'http://g:3000', token: 'tok', repositories: ['sven/two'], include: [], exclude: [] }] } });
-  const { data: list } = await call('GET', '/api/connections');
-  assert.equal(list.length, 1);
-  assert.equal(list[0].managed, true);
-  assert.deepEqual(app.connections.enabledRepositoryNames(list[0].id), ['sven/two']);
-  assert.equal((await call('DELETE', `/api/connections/${list[0].id}`)).data.error.code, 'connection_managed');
-  assert.equal((await call('PATCH', `/api/connections/${list[0].id}`, { name: 'x' })).status, 409);
-});
-
 test('webhook deliveries reach the app through the separate listener', async (t) => {
   const { call, app } = await startApp(t);
   const verify = await call('POST', '/api/connect/verify', { provider: 'gitea', endpoint: 'http://g:3000', token: 'tok' });
@@ -192,49 +182,29 @@ test('the token guide is built for the chosen server', async (t) => {
   assert.equal((await call('GET', '/api/connect/guide?provider=nope')).status, 400);
 });
 
-test('the app follows the app configuration live: connections appear, change and disappear, errors are shown, restarts are announced', async (t) => {
-  // The more specific routes come first: the first matching route answers.
-  const routes = {
-    'GET api.github.com/user/repos': { body: [{ full_name: 'octo/one', permissions: { push: true } }] },
-    'GET api.github.com/user': (url, init) => (init.headers.Authorization === 'Bearer bad' ? { status: 401, body: { message: 'Bad credentials' } } : { body: { id: 9, login: 'octo' } }),
-    ...giteaRoutes(),
-  };
-  const { app, call, dir } = await startApp(t, { routes });
+test('the app follows the app configuration live: settings change, restarts are announced', async (t) => {
+  const { app, call, dir } = await startApp(t);
   const write = (options) => writeFileSync(path.join(dir, 'options.json'), JSON.stringify(options));
   const status = async () => (await call('GET', '/api/status')).data.configuration;
-  const names = async () => (await call('GET', '/api/connections')).data.map((connection) => connection.name);
 
-  assert.deepEqual(await names(), []);
-  const github = { name: 'GitHub', provider: 'github', token: 'ghp_good' };
-  write({ connections: [github], schedule: { cron: '7 7 * * *' } });
+  write({ schedule: { cron: '7 7 * * *' } });
   assert.equal((await call('POST', '/api/configuration/reload')).data.changed, true);
-  assert.deepEqual(await names(), ['GitHub']);
-  assert.equal((await call('GET', '/api/connections')).data[0].managed, true);
   assert.deepEqual((await status()).problems, []);
   assert.equal(app.settings.get('schedule.cron'), '7 7 * * *', 'settings follow without a restart');
   assert.equal((await call('POST', '/api/configuration/reload')).data.changed, false, 'nothing changed, nothing to do');
 
-  write({ connections: [{ ...github, token: 'bad' }, { name: 'No token', provider: 'gitea' }], schedule: { cron: '7 7 * * *' } });
-  await call('POST', '/api/configuration/reload');
-  const problems = (await status()).problems;
-  assert.deepEqual(problems.map((problem) => problem.name).sort(), ['GitHub', 'No token']);
-  assert.match(problems.find((problem) => problem.name === 'GitHub').message, /rejected the token/);
-
   write({ advanced: { extra_packages: ['python3'] } });
   await call('POST', '/api/configuration/reload');
-  assert.deepEqual(await names(), [], 'a connection that left the configuration is removed');
   assert.equal((await status()).restartRequired, true, 'extra packages are installed by the start script');
   assert.deepEqual((await status()).problems, []);
+  assert.equal(app.settings.get('schedule.cron'), '0 */6 * * *', 'a value that left the configuration falls back to its default');
 });
 
 test('the app notices a changed options.json by itself', async (t) => {
-  const { call, dir } = await startApp(t);
-  writeFileSync(path.join(dir, 'options.json'), JSON.stringify({ connections: [{ name: 'Watched', provider: 'gitea', url: 'http://g:3000', token: 'tok' }] }));
-  for (let attempt = 0; attempt < 40; attempt += 1) {
-    if ((await call('GET', '/api/connections')).data.length) break;
-    await new Promise((resolve) => setTimeout(resolve, 100));
-  }
-  assert.deepEqual((await call('GET', '/api/connections')).data.map((connection) => connection.name), ['Watched']);
+  const { app, dir } = await startApp(t);
+  writeFileSync(path.join(dir, 'options.json'), JSON.stringify({ schedule: { cron: '5 5 * * *' } }));
+  for (let attempt = 0; attempt < 40 && app.settings.get('schedule.cron') !== '5 5 * * *'; attempt += 1) await new Promise((resolve) => setTimeout(resolve, 100));
+  assert.equal(app.settings.get('schedule.cron'), '5 5 * * *');
 });
 
 test('an app configuration the app cannot read is reported instead of being ignored silently', async (t) => {

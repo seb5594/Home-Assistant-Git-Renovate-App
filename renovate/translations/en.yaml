@@ -1,32 +1,4 @@
 configuration:
-  connections:
-    name: "Connections"
-    description: "Git server accounts defined here instead of in the web interface. They are read-only there. Useful to set the app up from configuration alone."
-    fields:
-      name:
-        name: "Name"
-        description: "Name of the connection."
-      provider:
-        name: "Server type"
-        description: "github, gitlab, gitea, forgejo, bitbucket, bitbucket-server, azure, gerrit or scm-manager."
-      username:
-        name: "User name"
-        description: "Only for Bitbucket Cloud and Gerrit: the account the token belongs to."
-      url:
-        name: "Address"
-        description: "Address of your server, for example https://git.example.org. Empty for github.com and gitlab.com."
-      token:
-        name: "Access token"
-        description: "Token with permission to push branches and open pull requests."
-      repositories:
-        name: "Repositories"
-        description: "Comma separated list such as owner/one, owner/two. Empty processes every repository the account can push to."
-      include:
-        name: "Include patterns"
-        description: "Comma separated patterns such as my-org/*. Only used when no repositories are listed."
-      exclude:
-        name: "Exclude patterns"
-        description: "Comma separated patterns that are never processed."
   renovate:
     name: "Renovate"
     description: "Defaults for all repositories. A renovate.json in a repository can override most of them."

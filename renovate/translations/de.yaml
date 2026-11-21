@@ -1,32 +1,4 @@
 configuration:
-  connections:
-    name: "Verbindungen"
-    description: "Git-Server-Konten, die hier statt in der Weboberfläche festgelegt werden. Dort sind sie schreibgeschützt. Praktisch, um die App allein per Konfiguration einzurichten."
-    fields:
-      name:
-        name: "Name"
-        description: "Name der Verbindung."
-      provider:
-        name: "Servertyp"
-        description: "github, gitlab, gitea, forgejo, bitbucket, bitbucket-server, azure, gerrit oder scm-manager."
-      username:
-        name: "Benutzername"
-        description: "Nur für Bitbucket Cloud und Gerrit: das Konto, zu dem das Token gehört."
-      url:
-        name: "Adresse"
-        description: "Adresse deines Servers, zum Beispiel https://git.example.org. Leer für github.com und gitlab.com."
-      token:
-        name: "Zugriffstoken"
-        description: "Token mit der Berechtigung, Branches zu pushen und Pull Requests zu öffnen."
-      repositories:
-        name: "Repositories"
-        description: "Kommagetrennte Liste wie owner/eins, owner/zwei. Leer verarbeitet jedes Repository, auf das das Konto pushen darf."
-      include:
-        name: "Einschluss-Muster"
-        description: "Kommagetrennte Muster wie my-org/*. Nur wirksam, wenn keine Repositories aufgelistet sind."
-      exclude:
-        name: "Ausschluss-Muster"
-        description: "Kommagetrennte Muster, die nie verarbeitet werden."
   renovate:
     name: "Renovate"
     description: "Standardwerte für alle Repositories. Eine renovate.json im Repository kann die meisten überschreiben."

@@ -30,7 +30,6 @@ function toConnection(row) {
     skipArchived: Boolean(row.skip_archived),
     extraConfig: parseJson(row.extra_config, {}),
     enabled: Boolean(row.enabled),
-    managed: Boolean(row.managed),
     tokenName: row.token_ref,
     lastSyncAt: row.last_sync_at,
     lastSyncError: row.last_sync_error,
@@ -172,7 +171,7 @@ export function createConnections({ db, vault, fetch: fetcher = fetch }) {
       return { provider: providerId, endpoint: normalized, username: user || null, account };
     },
 
-    async create({ name, provider: providerId, endpoint, token, username = null, oauth = null, tokenName = null, mode = 'selected', managed = false }) {
+    async create({ name, provider: providerId, endpoint, token, username = null, oauth = null, tokenName = null, mode = 'selected' }) {
       if (!NAME.test(name ?? '')) throw badRequest('invalid_name', 'The name may contain letters, digits, spaces and . _ ( ) -');
       if (byName.get(name)) throw conflict('name_taken', `A connection named "${name}" already exists`);
       if (!['all', 'selected'].includes(mode)) throw badRequest('invalid_mode', 'The mode must be "all" or "selected"');
@@ -181,11 +180,11 @@ export function createConnections({ db, vault, fetch: fetcher = fetch }) {
       const now = nowIso();
       db.prepare(`INSERT INTO connections
         (id, name, provider, endpoint, username, token_enc, token_ref, oauth_client_id, refresh_enc, token_expires_at,
-         account_login, account_name, avatar_url, mode, webhook_secret, managed, created_at, updated_at)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`).run(
+         account_login, account_name, avatar_url, mode, webhook_secret, created_at, updated_at)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`).run(
         id, name, providerId, checked.endpoint, checked.username, vault.encrypt(token.trim()), tokenName,
         oauth?.clientId ?? null, oauth?.refreshToken ? vault.encrypt(oauth.refreshToken) : null, oauth?.expiresAt ?? null,
-        checked.account.login, checked.account.name, checked.account.avatarUrl, mode, randomSecret(), managed ? 1 : 0, now, now,
+        checked.account.login, checked.account.name, checked.account.avatarUrl, mode, randomSecret(), now, now,
       );
       await api.syncRepositories(id).catch((error) => log.warn(`First repository sync of "${name}" failed`, error));
       return { connection: api.get(id), warnings: checked.account.warnings };
@@ -193,7 +192,6 @@ export function createConnections({ db, vault, fetch: fetcher = fetch }) {
 
     update(id, patch) {
       const found = row(id);
-      if (found.managed) throw conflict('connection_managed', 'This connection is defined in the app configuration');
       const sets = [];
       const values = [];
       const set = (column, value) => {
@@ -226,7 +224,6 @@ export function createConnections({ db, vault, fetch: fetcher = fetch }) {
     /** Replaces the token, for example after it expired. The account must stay the same. */
     async replaceToken(id, token) {
       const found = row(id);
-      if (found.managed) throw conflict('connection_managed', 'This connection is defined in the app configuration');
       const checked = await api.verify({ provider: found.provider, endpoint: found.endpoint, token, username: found.username });
       if (checked.account.login !== found.account_login) {
         throw conflict('account_mismatch', `The token belongs to ${checked.account.login}, but this connection uses ${found.account_login}`);
@@ -237,7 +234,6 @@ export function createConnections({ db, vault, fetch: fetcher = fetch }) {
 
     remove(id) {
       const found = row(id);
-      if (found.managed) throw conflict('connection_managed', 'This connection is defined in the app configuration');
       db.prepare('DELETE FROM connections WHERE id = ?').run(id);
     },
 
@@ -329,7 +325,6 @@ export function createConnections({ db, vault, fetch: fetcher = fetch }) {
 
     context: contextOf,
     rawRow: row,
-    findByName: (name) => byName.get(name),
   };
   return api;
 }
